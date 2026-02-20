@@ -272,6 +272,12 @@ button:disabled {
   border-color: var(--accent);
 }
 
+.answers-input-list {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.5rem;
+}
+
 .file-label {
   display: inline-flex;
   align-items: center;

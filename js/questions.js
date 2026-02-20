@@ -14,7 +14,7 @@ const summaryEl = document.getElementById("questions-summary");
 const questionItems = document.getElementById("question-items");
 const questionForm = document.getElementById("question-form");
 const formQuestion = document.getElementById("form-question");
-const formAnswers = document.getElementById("form-answers");
+const formAnswerInputs = Array.from(document.querySelectorAll("[data-answer-input]"));
 const newQuestionButton = document.getElementById("new-question");
 const deleteQuestionButton = document.getElementById("delete-question");
 const exportJsonButton = document.getElementById("export-json");
@@ -32,25 +32,20 @@ async function loadDefaultQuestions() {
   return response.json();
 }
 
-function parseAnswers(text) {
-  return text
-    .split("\n")
-    .map((line) => line.trim())
+function parseAnswersFromInputs() {
+  return formAnswerInputs
+    .map((input) => input.value.trim())
     .filter(Boolean)
-    .map((line) => {
-      const [answerText, pointsRaw] = line.split("|");
-      const points = Number(pointsRaw);
-
-      return {
-        text: (answerText || "").trim(),
-        points: Number.isFinite(points) ? points : 0,
-      };
-    })
-    .filter((item) => item.text.length > 0);
+    .map((text) => ({
+      text,
+      points: 0,
+    }));
 }
 
-function formatAnswers(answers) {
-  return answers.map((answer) => `${answer.text}|${answer.points}`).join("\n");
+function fillAnswersInputs(answers) {
+  formAnswerInputs.forEach((input, index) => {
+    input.value = answers[index]?.text || "";
+  });
 }
 
 function enableQuestions() {
@@ -75,7 +70,7 @@ function ensureAuth() {
 
 function fillFormFromQuestion(question) {
   formQuestion.value = question.question;
-  formAnswers.value = formatAnswers(question.answers);
+  fillAnswersInputs(question.answers);
 }
 
 function renderQuestionList(state) {
@@ -106,7 +101,7 @@ function render(state) {
       : "No hay conexión con Supabase para guardar preguntas.";
     questionItems.innerHTML = "";
     formQuestion.value = "";
-    formAnswers.value = "";
+    fillAnswersInputs([]);
     return;
   }
 
@@ -155,7 +150,7 @@ function attachEvents() {
     event.preventDefault();
 
     const questionText = formQuestion.value.trim();
-    const answers = parseAnswers(formAnswers.value);
+    const answers = parseAnswersFromInputs();
 
     if (!questionText || !answers.length) {
       summaryEl.textContent = "Completa pregunta y respuestas válidas.";
@@ -179,7 +174,7 @@ function attachEvents() {
   newQuestionButton.addEventListener("click", () => {
     selectedQuestionIndex = null;
     formQuestion.value = "";
-    formAnswers.value = "";
+    fillAnswersInputs([]);
     formQuestion.focus();
   });
 

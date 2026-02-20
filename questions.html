@@ -51,8 +51,15 @@
               <input id="form-question" required />
             </label>
             <label>
-              Respuestas (una por línea con formato: texto|puntos)
-              <textarea id="form-answers" rows="10" required></textarea>
+              Respuestas
+              <div id="form-answers-list" class="answers-input-list">
+                <input data-answer-input placeholder="Respuesta 1" />
+                <input data-answer-input placeholder="Respuesta 2" />
+                <input data-answer-input placeholder="Respuesta 3" />
+                <input data-answer-input placeholder="Respuesta 4" />
+                <input data-answer-input placeholder="Respuesta 5" />
+                <input data-answer-input placeholder="Respuesta 6" />
+              </div>
             </label>
             <button type="submit">Guardar pregunta</button>
           </form>
