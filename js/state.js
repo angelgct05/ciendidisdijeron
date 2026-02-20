@@ -3,11 +3,13 @@ import { ROOM_CODE, SUPABASE_ANON_KEY, SUPABASE_URL } from "./config.js";
 
 const STORAGE_KEY = "fm100_state_v1";
 const CHANNEL_NAME = "fm100_channel";
+const QUESTION_ACTIONS = new Set(["SET_QUESTIONS", "UPSERT_QUESTION", "DELETE_QUESTION"]);
 
 let state = null;
 let channel = null;
 let supabase = null;
 let realtimeChannel = null;
+let questionsRealtimeChannel = null;
 let supabaseEnabled = false;
 const listeners = new Set();
 const connectionListeners = new Set();
@@ -164,6 +166,10 @@ export function getConnectionStatus() {
   return connectionStatus;
 }
 
+export function isSupabaseConnected() {
+  return supabaseEnabled && connectionStatus === "connected";
+}
+
 export function subscribeConnectionStatus(callback) {
   connectionListeners.add(callback);
   callback(getConnectionStatus());
@@ -302,10 +308,15 @@ async function upsertRoomState(nextState) {
     return false;
   }
 
+  const roomPayload = {
+    ...nextState,
+    questions: [],
+  };
+
   const { error } = await supabase.from("game_rooms").upsert(
     {
       room_code: ROOM_CODE,
-      state: nextState,
+      state: roomPayload,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "room_code" }
@@ -336,6 +347,73 @@ async function loadRoomState() {
   return data.state;
 }
 
+async function loadQuestionsFromSupabase() {
+  if (!supabaseEnabled || !supabase) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("game_questions")
+    .select("position,question,answers")
+    .eq("room_code", ROOM_CODE)
+    .order("position", { ascending: true });
+
+  if (error) {
+    return null;
+  }
+
+  const questions = (data || []).map((row, index) => ({
+    id: `q${index + 1}`,
+    question: row.question,
+    answers: Array.isArray(row.answers) ? row.answers : [],
+  }));
+
+  return normalizeQuestions(questions);
+}
+
+async function replaceQuestionsInSupabase(questions) {
+  if (!supabaseEnabled || !supabase) {
+    return false;
+  }
+
+  const { error: deleteError } = await supabase.from("game_questions").delete().eq("room_code", ROOM_CODE);
+  if (deleteError) {
+    return false;
+  }
+
+  if (!questions.length) {
+    return true;
+  }
+
+  const rows = questions.map((item, index) => ({
+    room_code: ROOM_CODE,
+    position: index,
+    question: item.question,
+    answers: item.answers,
+    updated_at: new Date().toISOString(),
+  }));
+
+  const { error: insertError } = await supabase.from("game_questions").insert(rows);
+  if (insertError) {
+    return false;
+  }
+
+  return true;
+}
+
+async function refreshQuestionsFromSupabase() {
+  const questions = await loadQuestionsFromSupabase();
+  if (!questions) {
+    return false;
+  }
+
+  state.questions = questions;
+  state.round.questionIndex = clampQuestionIndex(state.round.questionIndex);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  notifyOnly();
+  return true;
+}
+
 async function setupSupabase(defaultQuestions = []) {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !ROOM_CODE) {
     supabaseEnabled = false;
@@ -360,6 +438,17 @@ async function setupSupabase(defaultQuestions = []) {
   } else {
     setConnectionStatus("disconnected");
   }
+
+  const questionsFromTable = await loadQuestionsFromSupabase();
+  if (questionsFromTable && questionsFromTable.length) {
+    state.questions = questionsFromTable;
+  } else {
+    const seeded = await replaceQuestionsInSupabase(state.questions);
+    if (!seeded) {
+      setConnectionStatus("disconnected");
+    }
+  }
+  persistAndNotify(false);
 
   if (!realtimeChannel) {
     realtimeChannel = supabase
@@ -388,6 +477,31 @@ async function setupSupabase(defaultQuestions = []) {
         }
 
         if (status === "CLOSED" || status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          setConnectionStatus("disconnected");
+        }
+      });
+  }
+
+  if (!questionsRealtimeChannel) {
+    questionsRealtimeChannel = supabase
+      .channel(`questions-${ROOM_CODE}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "game_questions",
+          filter: `room_code=eq.${ROOM_CODE}`,
+        },
+        async () => {
+          const refreshed = await refreshQuestionsFromSupabase();
+          if (!refreshed) {
+            setConnectionStatus("disconnected");
+          }
+        }
+      )
+      .subscribe((status) => {
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
           setConnectionStatus("disconnected");
         }
       });
@@ -423,6 +537,10 @@ async function dispatchAsync(action, payload = {}) {
     throw new Error("State no inicializado. Llama initializeState primero.");
   }
 
+  if (QUESTION_ACTIONS.has(action) && !supabaseEnabled) {
+    throw new Error("No hay conexión con Supabase. No se puede guardar preguntas en modo local.");
+  }
+
   if (supabaseEnabled && action === "LOCK_BUZZ") {
     const team = payload.team;
     if (team !== "A" && team !== "B") {
@@ -446,12 +564,29 @@ async function dispatchAsync(action, payload = {}) {
     setConnectionStatus("disconnected");
   }
 
+  const previousState = clone(state);
+
   applyActionLocal(action, payload);
+
+  if (QUESTION_ACTIONS.has(action) && supabaseEnabled) {
+    const questionsSynced = await replaceQuestionsInSupabase(state.questions);
+    if (!questionsSynced) {
+      setConnectionStatus("disconnected");
+      state = previousState;
+      persistAndNotify(true);
+      throw new Error("No se pudo guardar preguntas/respuestas en Supabase.");
+    }
+  }
 
   if (supabaseEnabled) {
     const synced = await upsertRoomState(state);
     if (!synced) {
       setConnectionStatus("disconnected");
+      if (QUESTION_ACTIONS.has(action)) {
+        state = previousState;
+        persistAndNotify(true);
+        throw new Error("No se pudo guardar en Supabase. Verifica conexión y permisos.");
+      }
       persistAndNotify(true);
       return getState();
     }

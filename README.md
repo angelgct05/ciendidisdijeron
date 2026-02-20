@@ -34,3 +34,13 @@ Juego web estático con:
 5. Output directory: `/` (raíz del proyecto estático).
 
 Listo: Vercel servirá `index.html` como página principal y podrás abrir `/admin.html` para el panel de control.
+
+## Supabase (tabla dedicada de preguntas)
+
+El CRUD de preguntas/respuestas usa la tabla dedicada `game_questions`.
+
+Antes de usar el editor de preguntas, ejecuta el SQL de:
+
+- `supabase/game_questions.sql`
+
+Esto crea tabla, índices y políticas RLS mínimas para demo con `anon`.

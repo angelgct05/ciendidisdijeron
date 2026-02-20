@@ -1,4 +1,4 @@
-import { dispatch, initializeState, subscribe } from "./state.js";
+import { dispatch, getState, initializeState, isSupabaseConnected, subscribe } from "./state.js";
 
 const ADMIN_PIN = "2026";
 const ADMIN_AUTH_KEY = "fm100_admin_auth";
@@ -21,6 +21,7 @@ const exportJsonButton = document.getElementById("export-json");
 const importJsonInput = document.getElementById("import-json");
 
 let selectedQuestionIndex = null;
+let currentState = null;
 
 async function loadDefaultQuestions() {
   const response = await fetch("./data/questions.json", { cache: "no-store" });
@@ -97,15 +98,21 @@ function renderQuestionList(state) {
 }
 
 function render(state) {
+  currentState = state;
+
   if (!state.questions.length) {
-    summaryEl.textContent = "No hay preguntas aún. Crea la primera.";
+    summaryEl.textContent = isSupabaseConnected()
+      ? "No hay preguntas aún. Crea la primera (guardado en Supabase)."
+      : "No hay conexión con Supabase para guardar preguntas.";
     questionItems.innerHTML = "";
     formQuestion.value = "";
     formAnswers.value = "";
     return;
   }
 
-  summaryEl.textContent = `Total de preguntas: ${state.questions.length}`;
+  summaryEl.textContent = isSupabaseConnected()
+    ? `Total de preguntas: ${state.questions.length} · Guardado en Supabase`
+    : `Total de preguntas: ${state.questions.length} · Sin conexión a Supabase`;
 
   if (selectedQuestionIndex === null || selectedQuestionIndex >= state.questions.length) {
     selectedQuestionIndex = state.round.questionIndex;
@@ -144,24 +151,29 @@ function attachEvents() {
     pinInput.focus();
   });
 
-  questionForm.addEventListener("submit", (event) => {
+  questionForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     const questionText = formQuestion.value.trim();
     const answers = parseAnswers(formAnswers.value);
 
     if (!questionText || !answers.length) {
+      summaryEl.textContent = "Completa pregunta y respuestas válidas.";
       return;
     }
 
-    dispatch("UPSERT_QUESTION", {
-      index: selectedQuestionIndex,
-      question: {
-        id: `q${Date.now()}`,
-        question: questionText,
-        answers,
-      },
-    });
+    try {
+      await dispatch("UPSERT_QUESTION", {
+        index: selectedQuestionIndex,
+        question: {
+          id: `q${Date.now()}`,
+          question: questionText,
+          answers,
+        },
+      });
+    } catch (error) {
+      summaryEl.textContent = error?.message || "No se pudo guardar en Supabase.";
+    }
   });
 
   newQuestionButton.addEventListener("click", () => {
@@ -171,18 +183,22 @@ function attachEvents() {
     formQuestion.focus();
   });
 
-  deleteQuestionButton.addEventListener("click", () => {
+  deleteQuestionButton.addEventListener("click", async () => {
     if (selectedQuestionIndex === null) {
       return;
     }
 
-    dispatch("DELETE_QUESTION", { index: selectedQuestionIndex });
-    selectedQuestionIndex = null;
+    try {
+      await dispatch("DELETE_QUESTION", { index: selectedQuestionIndex });
+      selectedQuestionIndex = null;
+    } catch (error) {
+      summaryEl.textContent = error?.message || "No se pudo eliminar en Supabase.";
+    }
   });
 
   exportJsonButton.addEventListener("click", () => {
-    const state = JSON.parse(localStorage.getItem("fm100_state_v1") || "{}");
-    const blob = new Blob([JSON.stringify(state.questions || [], null, 2)], { type: "application/json" });
+    const questions = currentState?.questions || getState()?.questions || [];
+    const blob = new Blob([JSON.stringify(questions, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
@@ -199,9 +215,13 @@ function attachEvents() {
 
     const text = await file.text();
     const parsed = JSON.parse(text);
-    dispatch("SET_QUESTIONS", { questions: parsed });
-    selectedQuestionIndex = 0;
-    importJsonInput.value = "";
+    try {
+      await dispatch("SET_QUESTIONS", { questions: parsed });
+      selectedQuestionIndex = 0;
+      importJsonInput.value = "";
+    } catch (error) {
+      summaryEl.textContent = error?.message || "No se pudo importar en Supabase.";
+    }
   });
 }
 
