@@ -49,7 +49,7 @@ h1, h2, h3, h4, p {
 
 .team,
 .question-card,
-.buzzer-card,
+  list-style: none;
 .admin-controls,
 .editor-card {
   background: rgba(246, 244, 244, 0.95);
@@ -58,18 +58,45 @@ h1, h2, h3, h4, p {
   padding: 1rem;
 }
 
-.team {
-  text-align: center;
+.questions-grid-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  padding: 0.15rem 0.25rem;
 }
 
-.score {
-  font-size: clamp(1.8rem, 4vw, 3rem);
-  font-weight: 700;
+.question-row {
+  background: var(--panel-2);
+  border: 1px solid rgba(90, 90, 90, 0.25);
+  color: var(--text);
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
   color: var(--accent);
 }
-
+.question-row.active {
 .badge {
   font-size: 0.85rem;
+
+.question-cell {
+  margin: 0;
+}
+
+.question-actions {
+  display: inline-flex;
+  gap: 0.35rem;
+}
+
+.question-action-btn {
+  min-height: 34px;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.82rem;
+}
   color: var(--muted);
   margin-bottom: 0.35rem;
 }

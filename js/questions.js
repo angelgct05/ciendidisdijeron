@@ -17,7 +17,6 @@ const formQuestion = document.getElementById("form-question");
 const formAnswerTextInputs = Array.from(document.querySelectorAll("[data-answer-text]"));
 const formAnswerPointsInputs = Array.from(document.querySelectorAll("[data-answer-points]"));
 const newQuestionButton = document.getElementById("new-question");
-const deleteQuestionButton = document.getElementById("delete-question");
 const exportJsonButton = document.getElementById("export-json");
 const importJsonInput = document.getElementById("import-json");
 
@@ -94,18 +93,53 @@ function renderQuestionList(state) {
   questionItems.innerHTML = "";
 
   state.questions.forEach((item, index) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = `question-item ${index === selectedQuestionIndex ? "active" : ""}`;
-    button.textContent = `${index + 1}. ${item.question}`;
+    const row = document.createElement("article");
+    row.className = `question-row ${index === selectedQuestionIndex ? "active" : ""}`;
 
-    button.addEventListener("click", () => {
+    const textCell = document.createElement("p");
+    textCell.className = "question-cell";
+    textCell.textContent = `${index + 1}. ${item.question}`;
+
+    const actionsCell = document.createElement("div");
+    actionsCell.className = "question-actions";
+
+    const editButton = document.createElement("button");
+    editButton.type = "button";
+    editButton.className = "question-action-btn";
+    editButton.textContent = "Editar";
+    editButton.addEventListener("click", () => {
       selectedQuestionIndex = index;
       fillFormFromQuestion(item);
       renderQuestionList(state);
     });
 
-    questionItems.appendChild(button);
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "question-action-btn danger";
+    deleteButton.textContent = "Eliminar";
+    deleteButton.addEventListener("click", async () => {
+      const confirmed = window.confirm("¿Estás seguro de eliminar esta pregunta?");
+      if (!confirmed) {
+        return;
+      }
+
+      try {
+        await dispatch("DELETE_QUESTION", { index });
+        if (selectedQuestionIndex === index) {
+          selectedQuestionIndex = null;
+        }
+      } catch (error) {
+        summaryEl.textContent = error?.message || "No se pudo eliminar en Supabase.";
+      }
+    });
+
+    actionsCell.appendChild(editButton);
+    actionsCell.appendChild(deleteButton);
+
+    row.appendChild(textCell);
+    row.appendChild(actionsCell);
+
+    questionItems.appendChild(row);
   });
 }
 
@@ -193,19 +227,6 @@ function attachEvents() {
     formQuestion.value = "";
     fillAnswersInputs([]);
     formQuestion.focus();
-  });
-
-  deleteQuestionButton.addEventListener("click", async () => {
-    if (selectedQuestionIndex === null) {
-      return;
-    }
-
-    try {
-      await dispatch("DELETE_QUESTION", { index: selectedQuestionIndex });
-      selectedQuestionIndex = null;
-    } catch (error) {
-      summaryEl.textContent = error?.message || "No se pudo eliminar en Supabase.";
-    }
   });
 
   exportJsonButton.addEventListener("click", () => {

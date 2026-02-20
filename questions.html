@@ -32,10 +32,13 @@
         <div class="editor-layout">
           <aside>
             <h4>Listado</h4>
-            <ul id="question-items" class="question-items"></ul>
+            <div class="questions-grid-head">
+              <span>Pregunta</span>
+              <span>Acciones</span>
+            </div>
+            <div id="question-items" class="question-items"></div>
             <div class="editor-actions">
               <button id="new-question" type="button">Nueva</button>
-              <button id="delete-question" type="button" class="danger">Eliminar</button>
             </div>
             <div class="editor-actions">
               <button id="export-json" type="button">Exportar JSON</button>
