@@ -23,17 +23,6 @@ const adminRoundLabel = document.getElementById("admin-round-label");
 const adminQuestionText = document.getElementById("admin-question-text");
 const adminAnswersList = document.getElementById("admin-answers-list");
 
-const questionItems = document.getElementById("question-items");
-const questionForm = document.getElementById("question-form");
-const formQuestion = document.getElementById("form-question");
-const formAnswers = document.getElementById("form-answers");
-const newQuestionButton = document.getElementById("new-question");
-const deleteQuestionButton = document.getElementById("delete-question");
-const exportJsonButton = document.getElementById("export-json");
-const importJsonInput = document.getElementById("import-json");
-
-let selectedQuestionIndex = null;
-
 async function loadDefaultQuestions() {
   const response = await fetch("./data/questions.json", { cache: "no-store" });
   if (!response.ok) {
@@ -41,27 +30,6 @@ async function loadDefaultQuestions() {
   }
 
   return response.json();
-}
-
-function parseAnswers(text) {
-  return text
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const [answerText, pointsRaw] = line.split("|");
-      const points = Number(pointsRaw);
-
-      return {
-        text: (answerText || "").trim(),
-        points: Number.isFinite(points) ? points : 0,
-      };
-    })
-    .filter((item) => item.text.length > 0);
-}
-
-function formatAnswers(answers) {
-  return answers.map((answer) => `${answer.text}|${answer.points}`).join("\n");
 }
 
 function renderAdminAnswers(state) {
@@ -83,26 +51,6 @@ function renderAdminAnswers(state) {
     });
 
     adminAnswersList.appendChild(item);
-  });
-}
-
-function renderQuestionList(state) {
-  questionItems.innerHTML = "";
-
-  state.questions.forEach((item, index) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = `question-item ${index === selectedQuestionIndex ? "active" : ""}`;
-    button.textContent = `${index + 1}. ${item.question}`;
-
-    button.addEventListener("click", () => {
-      selectedQuestionIndex = index;
-      formQuestion.value = item.question;
-      formAnswers.value = formatAnswers(item.answers);
-      renderQuestionList(state);
-    });
-
-    questionItems.appendChild(button);
   });
 }
 
@@ -153,7 +101,6 @@ function render(state) {
     adminRoundLabel.textContent = "Sin preguntas";
     adminQuestionText.textContent = "Importa o crea preguntas";
     adminAnswersList.innerHTML = "";
-    questionItems.innerHTML = "";
     return;
   }
 
@@ -162,14 +109,6 @@ function render(state) {
 
   renderAdminAnswers(state);
   renderBuzzerInfo(state);
-
-  if (selectedQuestionIndex === null || selectedQuestionIndex >= state.questions.length) {
-    selectedQuestionIndex = state.round.questionIndex;
-    formQuestion.value = state.questions[selectedQuestionIndex].question;
-    formAnswers.value = formatAnswers(state.questions[selectedQuestionIndex].answers);
-  }
-
-  renderQuestionList(state);
 }
 
 function enableAdmin() {
@@ -232,65 +171,6 @@ function attachEvents() {
     });
   });
 
-  questionForm.addEventListener("submit", (event) => {
-    event.preventDefault();
-
-    const questionText = formQuestion.value.trim();
-    const answers = parseAnswers(formAnswers.value);
-
-    if (!questionText || !answers.length) {
-      return;
-    }
-
-    dispatch("UPSERT_QUESTION", {
-      index: selectedQuestionIndex,
-      question: {
-        id: `q${Date.now()}`,
-        question: questionText,
-        answers,
-      },
-    });
-  });
-
-  newQuestionButton.addEventListener("click", () => {
-    selectedQuestionIndex = null;
-    formQuestion.value = "";
-    formAnswers.value = "";
-    formQuestion.focus();
-  });
-
-  deleteQuestionButton.addEventListener("click", () => {
-    if (selectedQuestionIndex === null) {
-      return;
-    }
-
-    dispatch("DELETE_QUESTION", { index: selectedQuestionIndex });
-    selectedQuestionIndex = null;
-  });
-
-  exportJsonButton.addEventListener("click", () => {
-    const state = JSON.parse(localStorage.getItem("fm100_state_v1") || "{}");
-    const blob = new Blob([JSON.stringify(state.questions || [], null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "questions.json";
-    anchor.click();
-    URL.revokeObjectURL(url);
-  });
-
-  importJsonInput.addEventListener("change", async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-
-    const text = await file.text();
-    const parsed = JSON.parse(text);
-    dispatch("SET_QUESTIONS", { questions: parsed });
-    selectedQuestionIndex = 0;
-    importJsonInput.value = "";
-  });
 }
 
 async function main() {

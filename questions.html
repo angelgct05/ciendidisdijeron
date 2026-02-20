@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>100 Mexicanos Dijeron - Preguntas</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="auth-overlay" class="auth-overlay">
+      <form id="pin-form" class="auth-card" novalidate>
+        <h1>Preguntas - Admin</h1>
+        <p>Ingresa PIN de 4 dígitos</p>
+        <input id="pin-input" type="password" inputmode="numeric" maxlength="4" minlength="4" pattern="[0-9]{4}" placeholder="****" required />
+        <button type="submit">Entrar</button>
+        <p id="pin-error" class="error-text"></p>
+      </form>
+    </div>
+
+    <main id="questions-app" class="layout admin hidden">
+      <header class="topbar">
+        <h1>Editor de Preguntas</h1>
+        <div class="inline-controls">
+          <a class="link-btn" href="./admin.html" target="_blank" rel="noopener">Abrir Panel Admin</a>
+          <button id="logout-admin" type="button" class="danger">Cerrar sesión</button>
+        </div>
+      </header>
+
+      <section class="editor-card">
+        <h3>Preguntas de la Sala</h3>
+        <p id="questions-summary" class="hint"></p>
+        <div class="editor-layout">
+          <aside>
+            <h4>Listado</h4>
+            <ul id="question-items" class="question-items"></ul>
+            <div class="editor-actions">
+              <button id="new-question" type="button">Nueva</button>
+              <button id="delete-question" type="button" class="danger">Eliminar</button>
+            </div>
+            <div class="editor-actions">
+              <button id="export-json" type="button">Exportar JSON</button>
+              <label class="file-label">Importar JSON
+                <input id="import-json" type="file" accept="application/json" />
+              </label>
+            </div>
+          </aside>
+
+          <form id="question-form" class="question-form">
+            <label>
+              Pregunta
+              <input id="form-question" required />
+            </label>
+            <label>
+              Respuestas (una por línea con formato: texto|puntos)
+              <textarea id="form-answers" rows="10" required></textarea>
+            </label>
+            <button type="submit">Guardar pregunta</button>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="./js/questions.js"></script>
+  </body>
+</html>
