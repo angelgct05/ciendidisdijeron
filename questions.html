@@ -32,11 +32,18 @@
         <div class="editor-layout">
           <aside>
             <h4>Listado</h4>
-            <div class="questions-grid-head">
-              <span>Pregunta</span>
-              <span>Acciones</span>
+            <div class="questions-table-wrap">
+              <table class="questions-table">
+                <thead>
+                  <tr>
+                    <th><button type="button" class="sort-btn" data-sort="index">#</button></th>
+                    <th><button type="button" class="sort-btn" data-sort="question">Pregunta</button></th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="question-items"></tbody>
+              </table>
             </div>
-            <div id="question-items" class="question-items"></div>
             <div class="editor-actions">
               <button id="new-question" type="button">Nueva</button>
             </div>

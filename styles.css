@@ -74,38 +74,73 @@ h1, h2, h3, h4, p {
   margin-bottom: 0.35rem;
 }
 
-.questions-grid-head {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.5rem;
+.questions-table-wrap {
+  max-height: 280px;
+  overflow: auto;
+  border: 1px solid rgba(90, 90, 90, 0.22);
+  border-radius: 10px;
+}
+
+.questions-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.questions-table th,
+.questions-table td {
+  text-align: left;
+  padding: 0.5rem 0.55rem;
+  border-bottom: 1px solid rgba(90, 90, 90, 0.2);
+  vertical-align: middle;
+}
+
+.questions-table th {
   font-size: 0.82rem;
   color: var(--muted);
-  padding: 0.15rem 0.25rem;
+  background: rgba(90, 90, 90, 0.08);
+}
+
+.sort-btn {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 700;
+  min-height: auto;
+  padding: 0;
+  cursor: pointer;
+}
+
+.sort-btn.active {
+  color: var(--accent);
 }
 
 .question-row {
   background: var(--panel-2);
-  border: 1px solid rgba(90, 90, 90, 0.25);
-  color: var(--text);
-  padding: 0.45rem 0.55rem;
-  border-radius: 8px;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.5rem;
-  align-items: center;
 }
 
 .question-row.active {
-  border-color: var(--accent);
+  background: rgba(243, 128, 49, 0.12);
 }
 
 .question-cell {
   margin: 0;
 }
 
+.question-order-cell {
+  width: 52px;
+}
+
 .question-actions {
-  display: inline-flex;
-  gap: 0.35rem;
+  width: 1%;
+  white-space: nowrap;
+}
+
+.question-actions .question-action-btn {
+  margin-right: 0.35rem;
+}
+
+.question-actions .question-action-btn:last-child {
+  margin-right: 0;
 }
 
 .question-action-btn {
@@ -279,13 +314,8 @@ button:disabled {
 }
 
 .question-items {
-  list-style: none;
   margin: 0 0 0.6rem;
   padding: 0;
-  display: grid;
-  gap: 0.45rem;
-  max-height: 260px;
-  overflow: auto;
 }
 
 .editor-actions {
@@ -408,6 +438,30 @@ button:disabled {
 
   .question-items {
     max-height: 220px;
+  }
+
+  .questions-table-wrap {
+    max-height: 240px;
+  }
+
+  .questions-table,
+  .questions-table tbody,
+  .questions-table tr,
+  .questions-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .questions-table thead {
+    display: none;
+  }
+
+  .question-row {
+    border-bottom: 1px solid rgba(90, 90, 90, 0.2);
+  }
+
+  .question-actions {
+    margin-top: 0.35rem;
   }
 
   .question-form textarea {

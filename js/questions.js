@@ -19,9 +19,12 @@ const formAnswerPointsInputs = Array.from(document.querySelectorAll("[data-answe
 const newQuestionButton = document.getElementById("new-question");
 const exportJsonButton = document.getElementById("export-json");
 const importJsonInput = document.getElementById("import-json");
+const sortButtons = Array.from(document.querySelectorAll("[data-sort]"));
 
 let selectedQuestionIndex = null;
 let currentState = null;
+let sortBy = "index";
+let sortDirection = "asc";
 
 async function loadDefaultQuestions() {
   const response = await fetch("./data/questions.json", { cache: "no-store" });
@@ -89,18 +92,58 @@ function fillFormFromQuestion(question) {
   fillAnswersInputs(question.answers);
 }
 
+function getSortedItems(state) {
+  const mapped = state.questions.map((question, index) => ({ question, index }));
+
+  mapped.sort((left, right) => {
+    if (sortBy === "question") {
+      const leftText = left.question.question.toLowerCase();
+      const rightText = right.question.question.toLowerCase();
+      const comparison = leftText.localeCompare(rightText, "es", { sensitivity: "base" });
+      return sortDirection === "asc" ? comparison : -comparison;
+    }
+
+    const comparison = left.index - right.index;
+    return sortDirection === "asc" ? comparison : -comparison;
+  });
+
+  return mapped;
+}
+
+function renderSortButtons() {
+  sortButtons.forEach((button) => {
+    const isActive = button.dataset.sort === sortBy;
+    button.classList.toggle("active", isActive);
+
+    if (!isActive) {
+      button.textContent = button.dataset.sort === "index" ? "#" : "Pregunta";
+      return;
+    }
+
+    const arrow = sortDirection === "asc" ? "↑" : "↓";
+    button.textContent = button.dataset.sort === "index" ? `# ${arrow}` : `Pregunta ${arrow}`;
+  });
+}
+
 function renderQuestionList(state) {
   questionItems.innerHTML = "";
+  renderSortButtons();
 
-  state.questions.forEach((item, index) => {
-    const row = document.createElement("article");
+  const sortedItems = getSortedItems(state);
+
+  sortedItems.forEach(({ question: item, index }) => {
+    const row = document.createElement("tr");
     row.className = `question-row ${index === selectedQuestionIndex ? "active" : ""}`;
 
-    const textCell = document.createElement("p");
-    textCell.className = "question-cell";
-    textCell.textContent = `${index + 1}. ${item.question}`;
+    const orderCell = document.createElement("td");
+    orderCell.className = "question-order-cell";
+    orderCell.textContent = String(index + 1);
 
-    const actionsCell = document.createElement("div");
+    const textCell = document.createElement("td");
+    textCell.className = "question-cell";
+    textCell.textContent = item.question;
+
+    const actionsCell = document.createElement("td");
     actionsCell.className = "question-actions";
 
     const editButton = document.createElement("button");
@@ -136,6 +179,7 @@ function renderQuestionList(state) {
     actionsCell.appendChild(editButton);
     actionsCell.appendChild(deleteButton);
 
+    row.appendChild(orderCell);
     row.appendChild(textCell);
     row.appendChild(actionsCell);
 
@@ -227,6 +271,26 @@ function attachEvents() {
     formQuestion.value = "";
     fillAnswersInputs([]);
     formQuestion.focus();
+  });
+
+  sortButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const nextSortBy = button.dataset.sort;
+      if (!nextSortBy) {
+        return;
+      }
+
+      if (sortBy === nextSortBy) {
+        sortDirection = sortDirection === "asc" ? "desc" : "asc";
+      } else {
+        sortBy = nextSortBy;
+        sortDirection = "asc";
+      }
+
+      if (currentState) {
+        renderQuestionList(currentState);
+      }
+    });
   });
 
   exportJsonButton.addEventListener("click", () => {
