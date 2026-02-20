@@ -12,16 +12,11 @@ const logoutAdminButton = document.getElementById("logout-admin");
 
 const summaryEl = document.getElementById("questions-summary");
 const questionItems = document.getElementById("question-items");
-const questionForm = document.getElementById("question-form");
-const formQuestion = document.getElementById("form-question");
-const formAnswerTextInputs = Array.from(document.querySelectorAll("[data-answer-text]"));
-const formAnswerPointsInputs = Array.from(document.querySelectorAll("[data-answer-points]"));
 const newQuestionButton = document.getElementById("new-question");
 const exportJsonButton = document.getElementById("export-json");
 const importJsonInput = document.getElementById("import-json");
 const sortButtons = Array.from(document.querySelectorAll("[data-sort]"));
 
-let selectedQuestionIndex = null;
 let currentState = null;
 let sortBy = "index";
 let sortDirection = "asc";
@@ -34,38 +29,6 @@ async function loadDefaultQuestions() {
   }
 
   return response.json();
-}
-
-function parseAnswersFromInputs() {
-  const answers = [];
-
-  for (let index = 0; index < formAnswerTextInputs.length; index += 1) {
-    const text = formAnswerTextInputs[index].value.trim();
-    const pointsRaw = formAnswerPointsInputs[index].value.trim();
-
-    if (!text) {
-      continue;
-    }
-
-    const points = Number(pointsRaw);
-    answers.push({
-      text,
-      points: Number.isFinite(points) && points >= 0 ? points : 0,
-    });
-  }
-
-  return answers;
-}
-
-function fillAnswersInputs(answers) {
-  formAnswerTextInputs.forEach((input, index) => {
-    input.value = answers[index]?.text || "";
-  });
-
-  formAnswerPointsInputs.forEach((input, index) => {
-    const points = answers[index]?.points;
-    input.value = Number.isFinite(Number(points)) ? String(points) : "";
-  });
 }
 
 function enableQuestions() {
@@ -86,11 +49,6 @@ function ensureAuth() {
 
   window.location.href = "./admin.html";
   return false;
-}
-
-function fillFormFromQuestion(question) {
-  formQuestion.value = question.question;
-  fillAnswersInputs(question.answers);
 }
 
 function getSortedItems(state) {
@@ -134,7 +92,7 @@ function renderQuestionList(state) {
 
   sortedItems.forEach(({ question: item, index }) => {
     const row = document.createElement("tr");
-    row.className = `question-row ${index === selectedQuestionIndex ? "active" : ""}`;
+    row.className = "question-row";
 
     const orderCell = document.createElement("td");
     orderCell.className = "question-order-cell";
@@ -151,10 +109,24 @@ function renderQuestionList(state) {
     editButton.type = "button";
     editButton.className = "question-action-btn";
     editButton.textContent = "Editar";
-    editButton.addEventListener("click", () => {
-      selectedQuestionIndex = index;
-      fillFormFromQuestion(item);
-      renderQuestionList(state);
+    editButton.addEventListener("click", async () => {
+      const nextQuestionText = window.prompt("Editar pregunta", item.question);
+      if (!nextQuestionText || !nextQuestionText.trim()) {
+        return;
+      }
+
+      try {
+        await dispatch("UPSERT_QUESTION", {
+          index,
+          question: {
+            id: item.id || `q${Date.now()}`,
+            question: nextQuestionText.trim(),
+            answers: item.answers?.length ? item.answers : [{ text: "Respuesta", points: 0 }],
+          },
+        });
+      } catch (error) {
+        summaryEl.textContent = error?.message || "No se pudo guardar en Supabase.";
+      }
     });
 
     const deleteButton = document.createElement("button");
@@ -169,8 +141,8 @@ function renderQuestionList(state) {
 
       try {
         await dispatch("DELETE_QUESTION", { index });
-        if (selectedQuestionIndex === index) {
-          selectedQuestionIndex = null;
+        if (expandedQuestionIndex === index) {
+          expandedQuestionIndex = null;
         }
       } catch (error) {
         summaryEl.textContent = error?.message || "No se pudo eliminar en Supabase.";
@@ -322,8 +294,6 @@ function render(state) {
       ? "No hay preguntas aún. Crea la primera (guardado en Supabase)."
       : "No hay conexión con Supabase para guardar preguntas.";
     questionItems.innerHTML = "";
-    formQuestion.value = "";
-    fillAnswersInputs([]);
     return;
   }
 
@@ -331,11 +301,6 @@ function render(state) {
     ? `Total de preguntas: ${state.questions.length} · Guardado en Supabase`
     : `Total de preguntas: ${state.questions.length} · Sin conexión a Supabase`;
 
-  if (selectedQuestionIndex === null || selectedQuestionIndex >= state.questions.length) {
-    selectedQuestionIndex = state.round.questionIndex;
-  }
-
-  fillFormFromQuestion(state.questions[selectedQuestionIndex]);
   renderQuestionList(state);
 }
 
@@ -368,36 +333,26 @@ function attachEvents() {
     pinInput.focus();
   });
 
-  questionForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const questionText = formQuestion.value.trim();
-    const answers = parseAnswersFromInputs();
-
-    if (!questionText || !answers.length) {
-      summaryEl.textContent = "Completa pregunta y respuestas válidas.";
+  newQuestionButton.addEventListener("click", async () => {
+    const questionText = window.prompt("Nueva pregunta");
+    if (!questionText || !questionText.trim()) {
       return;
     }
 
     try {
       await dispatch("UPSERT_QUESTION", {
-        index: selectedQuestionIndex,
         question: {
           id: `q${Date.now()}`,
-          question: questionText,
-          answers,
+          question: questionText.trim(),
+          answers: [{ text: "Respuesta", points: 0 }],
         },
       });
+
+      const nextIndex = currentState?.questions?.length ?? 0;
+      expandedQuestionIndex = nextIndex;
     } catch (error) {
       summaryEl.textContent = error?.message || "No se pudo guardar en Supabase.";
     }
-  });
-
-  newQuestionButton.addEventListener("click", () => {
-    selectedQuestionIndex = null;
-    formQuestion.value = "";
-    fillAnswersInputs([]);
-    formQuestion.focus();
   });
 
   sortButtons.forEach((button) => {

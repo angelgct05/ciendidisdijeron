@@ -363,6 +363,28 @@ button:disabled {
   gap: 0.8rem;
 }
 
+.editor-layout.questions-full {
+  grid-template-columns: 1fr;
+}
+
+.editor-layout.questions-full > aside {
+  width: 100%;
+}
+
+.editor-layout.questions-full .editor-actions {
+  width: 100%;
+}
+
+.editor-layout.questions-full .editor-actions button,
+.editor-layout.questions-full .editor-actions .file-label {
+  flex: 1;
+  justify-content: center;
+}
+
+.editor-layout.questions-full .questions-table-wrap {
+  max-height: 360px;
+}
+
 .question-items {
   margin: 0 0 0.6rem;
   padding: 0;

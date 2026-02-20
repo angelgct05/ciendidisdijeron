@@ -29,7 +29,7 @@
       <section class="editor-card">
         <h3>Preguntas de la Sala</h3>
         <p id="questions-summary" class="hint"></p>
-        <div class="editor-layout">
+        <div class="editor-layout questions-full">
           <aside>
             <h4>Listado</h4>
             <div class="questions-table-wrap">
@@ -54,39 +54,6 @@
               </label>
             </div>
           </aside>
-
-          <form id="question-form" class="question-form">
-            <label>
-              Pregunta
-              <input id="form-question" required />
-            </label>
-            <label>
-              Respuestas
-              <div id="form-answers-list" class="answers-input-list">
-                <div class="answer-row">
-                  <input data-answer-text placeholder="Respuesta 1" />
-                  <input data-answer-points type="number" min="0" step="1" placeholder="Puntos" />
-                </div>
-                <div class="answer-row">
-                  <input data-answer-text placeholder="Respuesta 2" />
-                  <input data-answer-points type="number" min="0" step="1" placeholder="Puntos" />
-                </div>
-                <div class="answer-row">
-                  <input data-answer-text placeholder="Respuesta 3" />
-                  <input data-answer-points type="number" min="0" step="1" placeholder="Puntos" />
-                </div>
-                <div class="answer-row">
-                  <input data-answer-text placeholder="Respuesta 4" />
-                  <input data-answer-points type="number" min="0" step="1" placeholder="Puntos" />
-                </div>
-                <div class="answer-row">
-                  <input data-answer-text placeholder="Respuesta 5" />
-                  <input data-answer-points type="number" min="0" step="1" placeholder="Puntos" />
-                </div>
-              </div>
-            </label>
-            <button type="submit">Guardar pregunta</button>
-          </form>
         </div>
       </section>
     </main>
