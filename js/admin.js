@@ -1,4 +1,4 @@
-import { dispatch, initializeState, subscribe } from "./state.js";
+import { dispatch, initializeState, subscribe, subscribeConnectionStatus } from "./state.js";
 
 const ADMIN_PIN = "2026";
 const ADMIN_AUTH_KEY = "fm100_admin_auth";
@@ -17,6 +17,7 @@ const resetRoundButton = document.getElementById("reset-round");
 const nextQuestionButton = document.getElementById("next-question");
 const prevQuestionButton = document.getElementById("prev-question");
 const resetGameButton = document.getElementById("reset-game");
+const adminSupabaseStatus = document.getElementById("admin-supabase-status");
 const adminBuzzerStatus = document.getElementById("admin-buzzer-status");
 const adminRoundLabel = document.getElementById("admin-round-label");
 const adminQuestionText = document.getElementById("admin-question-text");
@@ -121,6 +122,25 @@ function renderBuzzerInfo(state) {
   }
 
   adminBuzzerStatus.textContent = "Buzzer cerrado.";
+}
+
+function renderSupabaseStatus(status) {
+  adminSupabaseStatus.classList.remove("status-connected", "status-connecting", "status-disconnected");
+
+  if (status === "connected") {
+    adminSupabaseStatus.textContent = "Supabase: conectado";
+    adminSupabaseStatus.classList.add("status-connected");
+    return;
+  }
+
+  if (status === "connecting") {
+    adminSupabaseStatus.textContent = "Supabase: conectando...";
+    adminSupabaseStatus.classList.add("status-connecting");
+    return;
+  }
+
+  adminSupabaseStatus.textContent = "Supabase: no conectado";
+  adminSupabaseStatus.classList.add("status-disconnected");
 }
 
 function render(state) {
@@ -285,6 +305,7 @@ async function main() {
   }
 
   await initializeState(defaults);
+  subscribeConnectionStatus(renderSupabaseStatus);
   subscribe(render);
 }
 

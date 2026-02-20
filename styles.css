@@ -158,6 +158,34 @@ button:disabled {
   color: var(--accent);
 }
 
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border: 1px solid rgba(156, 163, 175, 0.35);
+}
+
+.status-connected {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+  border-color: rgba(16, 185, 129, 0.55);
+}
+
+.status-connecting {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fcd34d;
+  border-color: rgba(245, 158, 11, 0.55);
+}
+
+.status-disconnected {
+  background: rgba(220, 38, 38, 0.2);
+  color: #fca5a5;
+  border-color: rgba(220, 38, 38, 0.55);
+}
+
 .admin {
   padding-top: 0.8rem;
 }

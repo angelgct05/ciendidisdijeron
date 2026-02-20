@@ -10,6 +10,8 @@ let supabase = null;
 let realtimeChannel = null;
 let supabaseEnabled = false;
 const listeners = new Set();
+const connectionListeners = new Set();
+let connectionStatus = "connecting";
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -109,6 +111,19 @@ function notifyOnly() {
   listeners.forEach((callback) => callback(getState()));
 }
 
+function notifyConnectionStatus() {
+  connectionListeners.forEach((callback) => callback(connectionStatus));
+}
+
+function setConnectionStatus(nextStatus) {
+  if (connectionStatus === nextStatus) {
+    return;
+  }
+
+  connectionStatus = nextStatus;
+  notifyConnectionStatus();
+}
+
 function setupChannel() {
   if (channel || typeof BroadcastChannel === "undefined") {
     return;
@@ -142,6 +157,19 @@ export function subscribe(callback) {
 
   return () => {
     listeners.delete(callback);
+  };
+}
+
+export function getConnectionStatus() {
+  return connectionStatus;
+}
+
+export function subscribeConnectionStatus(callback) {
+  connectionListeners.add(callback);
+  callback(getConnectionStatus());
+
+  return () => {
+    connectionListeners.delete(callback);
   };
 }
 
@@ -311,9 +339,11 @@ async function loadRoomState() {
 async function setupSupabase(defaultQuestions = []) {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !ROOM_CODE) {
     supabaseEnabled = false;
+    setConnectionStatus("disconnected");
     return;
   }
 
+  setConnectionStatus("connecting");
   supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   supabaseEnabled = true;
 
@@ -326,6 +356,9 @@ async function setupSupabase(defaultQuestions = []) {
   if (remoteState) {
     state = validateState(remoteState, defaultQuestions);
     persistAndNotify(false);
+    setConnectionStatus("connected");
+  } else {
+    setConnectionStatus("disconnected");
   }
 
   if (!realtimeChannel) {
@@ -348,7 +381,16 @@ async function setupSupabase(defaultQuestions = []) {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          setConnectionStatus("connected");
+          return;
+        }
+
+        if (status === "CLOSED" || status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          setConnectionStatus("disconnected");
+        }
+      });
   }
 }
 
@@ -366,6 +408,7 @@ async function initializeStateAsync(defaultQuestions = []) {
     await setupSupabase(defaultQuestions);
   } catch {
     supabaseEnabled = false;
+    setConnectionStatus("disconnected");
   }
 
   return getState();
@@ -399,6 +442,8 @@ async function dispatchAsync(action, payload = {}) {
       }
       return getState();
     }
+
+    setConnectionStatus("disconnected");
   }
 
   applyActionLocal(action, payload);
@@ -406,9 +451,12 @@ async function dispatchAsync(action, payload = {}) {
   if (supabaseEnabled) {
     const synced = await upsertRoomState(state);
     if (!synced) {
+      setConnectionStatus("disconnected");
       persistAndNotify(true);
       return getState();
     }
+
+    setConnectionStatus("connected");
   }
 
   persistAndNotify(true);
