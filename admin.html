@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>100 Mexicanos Dijeron - Admin</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="auth-overlay" class="auth-overlay">
+      <form id="pin-form" class="auth-card" novalidate>
+        <h1>Panel de Administrador</h1>
+        <p>Ingresa PIN de 4 dígitos</p>
+        <input id="pin-input" type="password" inputmode="numeric" maxlength="4" minlength="4" pattern="[0-9]{4}" placeholder="****" required />
+        <button type="submit">Entrar</button>
+        <p id="pin-error" class="error-text"></p>
+      </form>
+    </div>
+
+    <main id="admin-app" class="layout admin hidden">
+      <header class="topbar">
+        <h1>Administrador</h1>
+        <div class="inline-controls">
+          <a class="link-btn" href="./index.html" target="_blank" rel="noopener">Abrir Pantalla de Juego</a>
+          <button id="logout-admin" type="button" class="danger">Cerrar sesión</button>
+        </div>
+      </header>
+
+      <section class="scoreboard">
+        <article class="team team-a">
+          <h2>Equipo A</h2>
+          <p id="admin-score-a" class="score">0</p>
+          <div class="inline-controls">
+            <button data-score="A:10">+10</button>
+            <button data-score="A:20">+20</button>
+            <button data-score="A:-10">-10</button>
+          </div>
+        </article>
+        <article class="team team-b">
+          <h2>Equipo B</h2>
+          <p id="admin-score-b" class="score">0</p>
+          <div class="inline-controls">
+            <button data-score="B:10">+10</button>
+            <button data-score="B:20">+20</button>
+            <button data-score="B:-10">-10</button>
+          </div>
+        </article>
+      </section>
+
+      <section class="admin-controls">
+        <h3>Control de Ronda</h3>
+        <div class="control-grid">
+          <button id="open-buzz">Abrir Buzzer</button>
+          <button id="reset-round">Reset Ronda</button>
+          <button id="next-question">Siguiente Pregunta</button>
+          <button id="prev-question">Pregunta Anterior</button>
+          <button id="reset-game" class="danger">Reset Partida</button>
+        </div>
+        <div class="control-grid">
+          <a class="link-btn" href="./captain.html?team=A" target="_blank" rel="noopener">Abrir Buzzer Capitán A</a>
+          <a class="link-btn" href="./captain.html?team=B" target="_blank" rel="noopener">Abrir Buzzer Capitán B</a>
+        </div>
+        <p id="admin-buzzer-status" class="buzzer-status"></p>
+      </section>
+
+      <section class="question-card">
+        <p class="badge" id="admin-round-label">Pregunta 1</p>
+        <h3 id="admin-question-text">Cargando pregunta...</h3>
+        <ul id="admin-answers-list" class="answers-list"></ul>
+        <p class="hint">Tip: haz clic en una respuesta para revelarla/ocultarla.</p>
+      </section>
+
+      <section class="editor-card">
+        <h3>Editor de Preguntas</h3>
+        <div class="editor-layout">
+          <aside>
+            <h4>Listado</h4>
+            <ul id="question-items" class="question-items"></ul>
+            <div class="editor-actions">
+              <button id="new-question">Nueva</button>
+              <button id="delete-question" class="danger">Eliminar</button>
+            </div>
+            <div class="editor-actions">
+              <button id="export-json">Exportar JSON</button>
+              <label class="file-label">Importar JSON
+                <input id="import-json" type="file" accept="application/json" />
+              </label>
+            </div>
+          </aside>
+
+          <form id="question-form" class="question-form">
+            <label>
+              Pregunta
+              <input id="form-question" required />
+            </label>
+            <label>
+              Respuestas (una por línea con formato: texto|puntos)
+              <textarea id="form-answers" rows="10" required></textarea>
+            </label>
+            <button type="submit">Guardar pregunta</button>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="./js/admin.js"></script>
+  </body>
+</html>

@@ -1,0 +1,3 @@
+export const SUPABASE_URL = "https://hazodxcwcxeripkbnzjy.supabase.co";
+export const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhhem9keGN3Y3hlcmlwa2Juemp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1MDkzNzcsImV4cCI6MjA4NzA4NTM3N30.EU2twiW4ywXUjJnMFdtDy_cKqYgGTZVMURquUOh_Lt8";
+export const ROOM_CODE = "SALA1";

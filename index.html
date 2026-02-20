@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>100 Mexicanos Dijeron - Juego</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="layout">
+      <header class="topbar">
+        <h1>100 Mexicanos Dijeron</h1>
+        <a class="link-btn" href="./admin.html" target="_blank" rel="noopener">Abrir Admin</a>
+      </header>
+
+      <section class="scoreboard">
+        <article class="team team-a">
+          <h2>Equipo A</h2>
+          <p id="score-a" class="score">0</p>
+        </article>
+        <article class="team team-b">
+          <h2>Equipo B</h2>
+          <p id="score-b" class="score">0</p>
+        </article>
+      </section>
+
+      <section class="question-card">
+        <p class="badge" id="round-label">Pregunta 1</p>
+        <h3 id="question-text">Cargando pregunta...</h3>
+        <ul id="answers-list" class="answers-list"></ul>
+      </section>
+
+      <section class="buzzer-card">
+        <p id="buzzer-status" class="buzzer-status">Esperando al administrador para abrir buzzer</p>
+        <p class="hint">Pantalla pública solo visual. El buzzer se presiona desde las páginas de Capitán A/B.</p>
+      </section>
+    </main>
+
+    <script type="module" src="./js/game.js"></script>
+  </body>
+</html>
