@@ -14,7 +14,8 @@ const summaryEl = document.getElementById("questions-summary");
 const questionItems = document.getElementById("question-items");
 const questionForm = document.getElementById("question-form");
 const formQuestion = document.getElementById("form-question");
-const formAnswerInputs = Array.from(document.querySelectorAll("[data-answer-input]"));
+const formAnswerTextInputs = Array.from(document.querySelectorAll("[data-answer-text]"));
+const formAnswerPointsInputs = Array.from(document.querySelectorAll("[data-answer-points]"));
 const newQuestionButton = document.getElementById("new-question");
 const deleteQuestionButton = document.getElementById("delete-question");
 const exportJsonButton = document.getElementById("export-json");
@@ -33,18 +34,34 @@ async function loadDefaultQuestions() {
 }
 
 function parseAnswersFromInputs() {
-  return formAnswerInputs
-    .map((input) => input.value.trim())
-    .filter(Boolean)
-    .map((text) => ({
+  const answers = [];
+
+  for (let index = 0; index < formAnswerTextInputs.length; index += 1) {
+    const text = formAnswerTextInputs[index].value.trim();
+    const pointsRaw = formAnswerPointsInputs[index].value.trim();
+
+    if (!text) {
+      continue;
+    }
+
+    const points = Number(pointsRaw);
+    answers.push({
       text,
-      points: 0,
-    }));
+      points: Number.isFinite(points) && points >= 0 ? points : 0,
+    });
+  }
+
+  return answers;
 }
 
 function fillAnswersInputs(answers) {
-  formAnswerInputs.forEach((input, index) => {
+  formAnswerTextInputs.forEach((input, index) => {
     input.value = answers[index]?.text || "";
+  });
+
+  formAnswerPointsInputs.forEach((input, index) => {
+    const points = answers[index]?.points;
+    input.value = Number.isFinite(Number(points)) ? String(points) : "";
   });
 }
 

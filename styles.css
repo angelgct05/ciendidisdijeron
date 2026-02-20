@@ -278,6 +278,12 @@ button:disabled {
   margin-top: 0.5rem;
 }
 
+.answer-row {
+  display: grid;
+  grid-template-columns: 1fr 120px;
+  gap: 0.5rem;
+}
+
 .file-label {
   display: inline-flex;
   align-items: center;
@@ -366,5 +372,9 @@ button:disabled {
 
   .question-form textarea {
     min-height: 180px;
+  }
+
+  .answer-row {
+    grid-template-columns: 1fr;
   }
 }
