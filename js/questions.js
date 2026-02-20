@@ -25,6 +25,7 @@ let selectedQuestionIndex = null;
 let currentState = null;
 let sortBy = "index";
 let sortDirection = "asc";
+let expandedQuestionIndex = null;
 
 async function loadDefaultQuestions() {
   const response = await fetch("./data/questions.json", { cache: "no-store" });
@@ -176,7 +177,17 @@ function renderQuestionList(state) {
       }
     });
 
+    const toggleAnswersButton = document.createElement("button");
+    toggleAnswersButton.type = "button";
+    toggleAnswersButton.className = "question-action-btn";
+    toggleAnswersButton.textContent = expandedQuestionIndex === index ? "Ocultar respuestas" : "Respuestas";
+    toggleAnswersButton.addEventListener("click", () => {
+      expandedQuestionIndex = expandedQuestionIndex === index ? null : index;
+      renderQuestionList(state);
+    });
+
     actionsCell.appendChild(editButton);
+    actionsCell.appendChild(toggleAnswersButton);
     actionsCell.appendChild(deleteButton);
 
     row.appendChild(orderCell);
@@ -184,6 +195,122 @@ function renderQuestionList(state) {
     row.appendChild(actionsCell);
 
     questionItems.appendChild(row);
+
+    if (expandedQuestionIndex === index) {
+      const expandedRow = document.createElement("tr");
+      expandedRow.className = "answers-expanded-row";
+
+      const expandedCell = document.createElement("td");
+      expandedCell.colSpan = 3;
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "answers-expanded-wrap";
+
+      const title = document.createElement("p");
+      title.className = "answers-expanded-title";
+      title.textContent = `Configurar respuestas de: ${item.question}`;
+
+      const table = document.createElement("table");
+      table.className = "answers-config-table";
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Respuesta</th>
+            <th>Puntos</th>
+          </tr>
+        </thead>
+      `;
+
+      const tbody = document.createElement("tbody");
+      const responseTextInputs = [];
+      const responsePointsInputs = [];
+
+      for (let answerIndex = 0; answerIndex < 5; answerIndex += 1) {
+        const answer = item.answers[answerIndex] || {};
+        const tr = document.createElement("tr");
+
+        const orderTd = document.createElement("td");
+        orderTd.textContent = String(answerIndex + 1);
+
+        const textTd = document.createElement("td");
+        const textInput = document.createElement("input");
+        textInput.placeholder = `Respuesta ${answerIndex + 1}`;
+        textInput.value = answer.text || "";
+        textTd.appendChild(textInput);
+
+        const pointsTd = document.createElement("td");
+        const pointsInput = document.createElement("input");
+        pointsInput.type = "number";
+        pointsInput.min = "0";
+        pointsInput.step = "1";
+        pointsInput.placeholder = "Puntos";
+        pointsInput.value = Number.isFinite(Number(answer.points)) ? String(answer.points) : "";
+        pointsTd.appendChild(pointsInput);
+
+        responseTextInputs.push(textInput);
+        responsePointsInputs.push(pointsInput);
+
+        tr.appendChild(orderTd);
+        tr.appendChild(textTd);
+        tr.appendChild(pointsTd);
+        tbody.appendChild(tr);
+      }
+
+      table.appendChild(tbody);
+
+      const actions = document.createElement("div");
+      actions.className = "answers-expanded-actions";
+
+      const saveButton = document.createElement("button");
+      saveButton.type = "button";
+      saveButton.textContent = "Guardar respuestas";
+      saveButton.addEventListener("click", async () => {
+        const nextAnswers = responseTextInputs
+          .map((input, responseIndex) => {
+            const text = input.value.trim();
+            const pointsValue = responsePointsInputs[responseIndex].value.trim();
+            if (!text) {
+              return null;
+            }
+
+            const points = Number(pointsValue);
+            return {
+              text,
+              points: Number.isFinite(points) && points >= 0 ? points : 0,
+            };
+          })
+          .filter(Boolean);
+
+        if (!nextAnswers.length) {
+          summaryEl.textContent = "Debes capturar al menos una respuesta para guardar.";
+          return;
+        }
+
+        try {
+          await dispatch("UPSERT_QUESTION", {
+            index,
+            question: {
+              id: item.id || `q${Date.now()}`,
+              question: item.question,
+              answers: nextAnswers,
+            },
+          });
+          summaryEl.textContent = "Respuestas guardadas correctamente.";
+        } catch (error) {
+          summaryEl.textContent = error?.message || "No se pudieron guardar las respuestas en Supabase.";
+        }
+      });
+
+      actions.appendChild(saveButton);
+      wrapper.appendChild(title);
+      wrapper.appendChild(table);
+      wrapper.appendChild(actions);
+      expandedCell.appendChild(wrapper);
+      expandedRow.appendChild(expandedCell);
+
+      questionItems.appendChild(expandedRow);
+    }
   });
 }
 
