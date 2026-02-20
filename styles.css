@@ -49,13 +49,29 @@ h1, h2, h3, h4, p {
 
 .team,
 .question-card,
-  list-style: none;
+.buzzer-card,
 .admin-controls,
 .editor-card {
   background: rgba(246, 244, 244, 0.95);
   border: 1px solid rgba(90, 90, 90, 0.22);
   border-radius: 14px;
   padding: 1rem;
+}
+
+.team {
+  text-align: center;
+}
+
+.score {
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.badge {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
 }
 
 .questions-grid-head {
@@ -77,11 +93,11 @@ h1, h2, h3, h4, p {
   grid-template-columns: 1fr auto;
   gap: 0.5rem;
   align-items: center;
-  color: var(--accent);
 }
+
 .question-row.active {
-.badge {
-  font-size: 0.85rem;
+  border-color: var(--accent);
+}
 
 .question-cell {
   margin: 0;
@@ -96,9 +112,6 @@ h1, h2, h3, h4, p {
   min-height: 34px;
   padding: 0.35rem 0.6rem;
   font-size: 0.82rem;
-}
-  color: var(--muted);
-  margin-bottom: 0.35rem;
 }
 
 .answers-list {
