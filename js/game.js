@@ -11,12 +11,15 @@ const roundLabelEl = document.getElementById("round-label");
 const buzzerStatusEl = document.getElementById("buzzer-status");
 const roundControlIndicatorEl = document.getElementById("round-control-indicator");
 const qrModalEl = document.getElementById("qr-modal");
+const teamBackModalEl = document.getElementById("team-back-modal");
+const teamBackAcceptButton = document.getElementById("team-back-accept");
 const playerGateEl = document.getElementById("player-gate");
 const playerGateFormEl = document.getElementById("player-gate-form");
 const playerNameInputEl = document.getElementById("player-name-input");
 const playerTeamSelectEl = document.getElementById("player-team-select");
 const playerGateErrorEl = document.getElementById("player-gate-error");
 const PLAYER_SESSION_KEY = "fm100_player_session";
+const TEAM_BACK_SEEN_KEY = "fm100_team_back_seen";
 const ADMIN_AUTH_KEY = "fm100_admin_auth";
 
 let playerRegistered = false;
@@ -59,6 +62,14 @@ function createPlayerId() {
   }
 
   return `p-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+}
+
+function getSeenTeamBackVersion() {
+  return Number(sessionStorage.getItem(TEAM_BACK_SEEN_KEY)) || 0;
+}
+
+function setSeenTeamBackVersion(version) {
+  sessionStorage.setItem(TEAM_BACK_SEEN_KEY, String(version));
 }
 
 function isAdminSession() {
@@ -105,8 +116,7 @@ function renderBuzzerState(state) {
   }
 
   if (isLocked) {
-    const winnerName = state.teams[state.round.buzzerWinner]?.name || `Equipo ${state.round.buzzerWinner}`;
-    buzzerStatusEl.textContent = `Ganó el buzzer: ${winnerName}`;
+    buzzerStatusEl.textContent = "Buzzer bloqueado.";
     buzzerStatusEl.classList.add("warn");
     return;
   }
@@ -147,6 +157,7 @@ function render(state) {
 
   qrModalEl.classList.toggle("hidden", !state.ui?.showQr);
   enforcePlayerSession(state);
+  renderTeamBackModal(state);
   maybeRedirectCaptain(state);
 
   if (!question) {
@@ -161,6 +172,26 @@ function render(state) {
 
   renderAnswers(state);
   renderBuzzerState(state);
+}
+
+function renderTeamBackModal(state) {
+  if (isAdminSession()) {
+    teamBackModalEl.classList.add("hidden");
+    return;
+  }
+
+  const session = loadPlayerSession();
+  const targetTeam = state.ui?.teamBackAlertTeam;
+  const version = Number(state.ui?.teamBackAlertVersion) || 0;
+
+  if (!session || (targetTeam !== "A" && targetTeam !== "B") || version <= 0 || session.team !== targetTeam) {
+    teamBackModalEl.classList.add("hidden");
+    return;
+  }
+
+  const seen = getSeenTeamBackVersion();
+  teamBackModalEl.dataset.version = String(version);
+  teamBackModalEl.classList.toggle("hidden", seen >= version);
 }
 
 function maybeRedirectCaptain(state) {
@@ -272,9 +303,20 @@ function attachPlayerGateEvents() {
   });
 }
 
+function attachTeamBackEvents() {
+  teamBackAcceptButton.addEventListener("click", () => {
+    const seenVersion = Number(teamBackModalEl.dataset.version || 0);
+    if (seenVersion > 0) {
+      setSeenTeamBackVersion(seenVersion);
+    }
+    teamBackModalEl.classList.add("hidden");
+  });
+}
+
 async function main() {
   try {
     attachPlayerGateEvents();
+    attachTeamBackEvents();
     const defaultQuestions = await loadDefaultQuestions();
     const initialState = await initializeState(defaultQuestions);
 

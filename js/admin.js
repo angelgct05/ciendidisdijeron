@@ -16,6 +16,10 @@ const teamNameInputA = document.getElementById("team-name-a-input");
 const teamNameInputB = document.getElementById("team-name-b-input");
 const adminScoreA = document.getElementById("admin-score-a");
 const adminScoreB = document.getElementById("admin-score-b");
+const adminStrikesA = document.getElementById("admin-strikes-a");
+const adminStrikesB = document.getElementById("admin-strikes-b");
+const addStrikeAButton = document.getElementById("add-strike-a");
+const addStrikeBButton = document.getElementById("add-strike-b");
 const scoreDeltaInputA = document.getElementById("score-delta-a");
 const scoreDeltaInputB = document.getElementById("score-delta-b");
 const teamMembersA = document.getElementById("team-members-a");
@@ -88,8 +92,7 @@ function renderBuzzerInfo(state) {
   }
 
   if (state.round.status === "locked" && state.round.buzzerWinner) {
-    const winnerName = state.teams[state.round.buzzerWinner]?.name || `Equipo ${state.round.buzzerWinner}`;
-    adminBuzzerStatus.textContent = `Ganó el buzzer: ${winnerName}`;
+    adminBuzzerStatus.textContent = "Buzzer bloqueado.";
     adminBuzzerStatus.classList.add("warn");
     return;
   }
@@ -199,6 +202,8 @@ function render(state) {
 
   adminScoreA.textContent = state.teams.A.score;
   adminScoreB.textContent = state.teams.B.score;
+  adminStrikesA.textContent = String(state.teams.A.strikes || 0);
+  adminStrikesB.textContent = String(state.teams.B.strikes || 0);
   renderTeamMembers(state, "A", teamMembersA);
   renderTeamMembers(state, "B", teamMembersB);
   toggleQrButton.textContent = state.ui?.showQr ? "Ocultar QR" : "Mostrar QR";
@@ -286,6 +291,8 @@ function attachEvents() {
     const state = getState();
     dispatch("TOGGLE_QR", { value: !state.ui?.showQr });
   });
+  addStrikeAButton.addEventListener("click", () => dispatch("ADD_STRIKE", { team: "A" }));
+  addStrikeBButton.addEventListener("click", () => dispatch("ADD_STRIKE", { team: "B" }));
   awardRevealedPointsButton.addEventListener("click", () => {
     const state = getState();
     const controlTeam = state.round.buzzerWinner;

@@ -33,6 +33,10 @@
           <h2 id="admin-team-name-a">Equipo A</h2>
           <input id="team-name-a-input" class="team-name-input" type="text" maxlength="24" placeholder="Nombre Equipo A" />
           <p id="admin-score-a" class="score">0</p>
+          <div class="strikes-block">
+            <p>Strikes: <strong id="admin-strikes-a">0</strong></p>
+            <button id="add-strike-a" type="button">Agregar Strike</button>
+          </div>
           <div class="score-adjust-controls">
             <button data-score-action="A:sub">Restar</button>
             <input id="score-delta-a" type="number" min="1" step="1" value="10" inputmode="numeric" aria-label="Puntos para Equipo A" />
@@ -47,6 +51,10 @@
           <h2 id="admin-team-name-b">Equipo B</h2>
           <input id="team-name-b-input" class="team-name-input" type="text" maxlength="24" placeholder="Nombre Equipo B" />
           <p id="admin-score-b" class="score">0</p>
+          <div class="strikes-block">
+            <p>Strikes: <strong id="admin-strikes-b">0</strong></p>
+            <button id="add-strike-b" type="button">Agregar Strike</button>
+          </div>
           <div class="score-adjust-controls">
             <button data-score-action="B:sub">Restar</button>
             <input id="score-delta-b" type="number" min="1" step="1" value="10" inputmode="numeric" aria-label="Puntos para Equipo B" />
@@ -64,7 +72,6 @@
         <div class="control-grid">
           <button id="open-buzz">Abrir Buzzer</button>
           <button id="toggle-qr">Mostrar QR</button>
-          <button id="award-revealed-points">Sumar mostradas al control</button>
           <button id="logout-all-players">Cerrar sesión de jugadores</button>
           <button id="reset-round">Reset Ronda</button>
           <button id="reset-game" class="danger">Reset Partida</button>
@@ -76,6 +83,7 @@
       <section class="question-card">
         <div class="question-nav-controls">
           <button id="prev-question">Pregunta Anterior</button>
+          <button id="award-revealed-points">Sumar las respuestas mostradas</button>
           <button id="next-question">Siguiente Pregunta</button>
         </div>
         <p class="badge" id="admin-round-label">Pregunta 1</p>

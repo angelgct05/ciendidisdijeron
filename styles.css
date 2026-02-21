@@ -80,6 +80,22 @@ h1, h2, h3, h4, p {
   color: var(--accent);
 }
 
+.strikes-block {
+  margin: 0.2rem 0 0.45rem;
+  display: grid;
+  gap: 0.35rem;
+  justify-items: center;
+}
+
+.strikes-block p {
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.strikes-block strong {
+  color: var(--accent);
+}
+
 .badge {
   font-size: 0.85rem;
   color: var(--muted);
@@ -292,10 +308,23 @@ h1, h2, h3, h4, p {
 }
 
 .question-nav-controls {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
   gap: 0.6rem;
   margin-bottom: 0.55rem;
+}
+
+.question-nav-controls #prev-question {
+  justify-self: start;
+}
+
+.question-nav-controls #award-revealed-points {
+  justify-self: center;
+}
+
+.question-nav-controls #next-question {
+  justify-self: end;
 }
 
 button,

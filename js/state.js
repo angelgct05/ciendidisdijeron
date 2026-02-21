@@ -79,8 +79,8 @@ function createInitialState(defaultQuestions = []) {
     version: 1,
     stateVersion: 0,
     teams: {
-      A: { name: "Equipo A", score: 0 },
-      B: { name: "Equipo B", score: 0 },
+      A: { name: "Equipo A", score: 0, strikes: 0 },
+      B: { name: "Equipo B", score: 0, strikes: 0 },
     },
     questions,
     round: {
@@ -97,6 +97,8 @@ function createInitialState(defaultQuestions = []) {
     ui: {
       showQr: false,
       logoutAllVersion: 0,
+      teamBackAlertTeam: null,
+      teamBackAlertVersion: 0,
     },
     updatedAt: Date.now(),
   };
@@ -117,10 +119,12 @@ function validateState(nextState, fallbackQuestions = []) {
       A: {
         name: normalizeTeamName(nextState.teams?.A?.name, "Equipo A"),
         score: Number(nextState.teams?.A?.score) || 0,
+        strikes: Math.max(0, Number(nextState.teams?.A?.strikes) || 0),
       },
       B: {
         name: normalizeTeamName(nextState.teams?.B?.name, "Equipo B"),
         score: Number(nextState.teams?.B?.score) || 0,
+        strikes: Math.max(0, Number(nextState.teams?.B?.strikes) || 0),
       },
     },
     questions,
@@ -143,6 +147,12 @@ function validateState(nextState, fallbackQuestions = []) {
       showQr: Boolean(nextState.ui?.showQr),
       logoutAllVersion: Number.isFinite(Number(nextState.ui?.logoutAllVersion))
         ? Number(nextState.ui.logoutAllVersion)
+        : 0,
+      teamBackAlertTeam: ["A", "B", null].includes(nextState.ui?.teamBackAlertTeam)
+        ? nextState.ui.teamBackAlertTeam
+        : null,
+      teamBackAlertVersion: Number.isFinite(Number(nextState.ui?.teamBackAlertVersion))
+        ? Number(nextState.ui.teamBackAlertVersion)
         : 0,
     },
     updatedAt: Number(nextState.updatedAt) || Date.now(),
@@ -261,6 +271,9 @@ function resetRoundInternals() {
     A: null,
     B: null,
   };
+  state.teams.A.strikes = 0;
+  state.teams.B.strikes = 0;
+  state.ui.teamBackAlertTeam = null;
 }
 
 function applyActionLocal(action, payload = {}) {
@@ -304,6 +317,21 @@ function applyActionLocal(action, payload = {}) {
       }
 
       state.teams[team].score = Math.max(0, state.teams[team].score + points);
+      break;
+    }
+    case "ADD_STRIKE": {
+      const team = payload.team;
+      if (team !== "A" && team !== "B") {
+        break;
+      }
+
+      state.teams[team].strikes = Math.max(0, (Number(state.teams[team].strikes) || 0) + 1);
+
+      const controlTeam = state.round.buzzerWinner;
+      if (state.teams[team].strikes >= 2 && (controlTeam === "A" || controlTeam === "B") && controlTeam === team) {
+        state.ui.teamBackAlertTeam = controlTeam === "A" ? "B" : "A";
+        state.ui.teamBackAlertVersion = (Number(state.ui.teamBackAlertVersion) || 0) + 1;
+      }
       break;
     }
     case "SET_TEAM_NAME": {

@@ -6,7 +6,10 @@ const team = (params.get("team") || "").toUpperCase();
 const captainTitle = document.getElementById("captain-title");
 const captainStatus = document.getElementById("captain-status");
 const captainBuzzButton = document.getElementById("captain-buzz");
+const teamBackModalEl = document.getElementById("team-back-modal");
+const teamBackAcceptButton = document.getElementById("team-back-accept");
 const PLAYER_SESSION_KEY = "fm100_player_session";
+const TEAM_BACK_SEEN_KEY = "fm100_team_back_seen";
 
 function resolveTeam() {
   return team === "A" || team === "B" ? team : null;
@@ -39,6 +42,27 @@ function loadPlayerSession() {
 
 function denyCaptainAccess() {
   window.location.replace("./index.html");
+}
+
+function getSeenTeamBackVersion() {
+  return Number(sessionStorage.getItem(TEAM_BACK_SEEN_KEY)) || 0;
+}
+
+function setSeenTeamBackVersion(version) {
+  sessionStorage.setItem(TEAM_BACK_SEEN_KEY, String(version));
+}
+
+function renderTeamBackModal(state, validTeam) {
+  const targetTeam = state.ui?.teamBackAlertTeam;
+  const version = Number(state.ui?.teamBackAlertVersion) || 0;
+  if ((targetTeam === "A" || targetTeam === "B") && targetTeam === validTeam && version > 0) {
+    const seen = getSeenTeamBackVersion();
+    teamBackModalEl.dataset.version = String(version);
+    teamBackModalEl.classList.toggle("hidden", seen >= version);
+    return;
+  }
+
+  teamBackModalEl.classList.add("hidden");
 }
 
 async function loadDefaultQuestions() {
@@ -74,6 +98,7 @@ function render(state) {
 
   const ownTeamName = state.teams[validTeam]?.name || `Equipo ${validTeam}`;
   captainTitle.textContent = `Capitán ${ownTeamName}`;
+  renderTeamBackModal(state, validTeam);
   const winner = state.round.buzzerWinner;
   const isOpen = state.round.status === "buzz-open";
 
@@ -88,7 +113,7 @@ function render(state) {
 
   if (winner) {
     const winnerName = state.teams[winner]?.name || `Equipo ${winner}`;
-    captainStatus.textContent = winner === validTeam ? "Tu equipo ganó el buzzer" : `Ganó ${winnerName}`;
+    captainStatus.textContent = winner === validTeam ? "Tu equipo tiene el control de la ronda" : `${winnerName} tiene el control de la ronda`;
     captainStatus.classList.add("warn");
     return;
   }
@@ -112,6 +137,13 @@ function onBuzz() {
 
 function attachEvents() {
   captainBuzzButton.addEventListener("click", onBuzz);
+  teamBackAcceptButton.addEventListener("click", () => {
+    const seenVersion = Number(teamBackModalEl.dataset.version || 0);
+    if (seenVersion > 0) {
+      setSeenTeamBackVersion(seenVersion);
+    }
+    teamBackModalEl.classList.add("hidden");
+  });
   window.addEventListener("keydown", (event) => {
     if (event.key === " " || event.key === "Enter") {
       event.preventDefault();
