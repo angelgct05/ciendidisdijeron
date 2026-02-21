@@ -643,6 +643,12 @@ button:disabled {
   gap: 0.8rem;
 }
 
+.captain-card .round-control-indicator,
+.captain-card .strikes-readonly {
+  margin: 0;
+  text-align: center;
+}
+
 .mini-modal {
   position: fixed;
   inset: 0;

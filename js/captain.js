@@ -5,6 +5,8 @@ const team = (params.get("team") || "").toUpperCase();
 
 const captainTitle = document.getElementById("captain-title");
 const captainStatus = document.getElementById("captain-status");
+const captainRoundControl = document.getElementById("captain-round-control");
+const captainStrikes = document.getElementById("captain-strikes");
 const captainBuzzButton = document.getElementById("captain-buzz");
 const teamBackModalEl = document.getElementById("team-back-modal");
 const teamBackAcceptButton = document.getElementById("team-back-accept");
@@ -99,6 +101,18 @@ function render(state) {
   const ownTeamName = state.teams[validTeam]?.name || `Equipo ${validTeam}`;
   captainTitle.textContent = `Capitán ${ownTeamName}`;
   renderTeamBackModal(state, validTeam);
+
+  const controlTeam = state.round.buzzerWinner;
+  if (controlTeam === "A" || controlTeam === "B") {
+    const controlName = state.teams[controlTeam]?.name || `Equipo ${controlTeam}`;
+    captainRoundControl.textContent = `Control de ronda: ${controlName}`;
+  } else {
+    captainRoundControl.textContent = "Control de ronda: sin equipo";
+  }
+
+  const ownStrikes = Number(state.teams[validTeam]?.strikes) || 0;
+  captainStrikes.innerHTML = `Strikes: <strong>${ownStrikes}</strong>`;
+
   const winner = state.round.buzzerWinner;
   const isOpen = state.round.status === "buzz-open";
 
