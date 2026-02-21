@@ -45,6 +45,30 @@ function normalizeTeamName(value, fallback) {
   return text.length ? text.slice(0, 24) : fallback;
 }
 
+function normalizePlayers(players) {
+  if (!Array.isArray(players)) {
+    return [];
+  }
+
+  return players
+    .map((player) => {
+      const id = String(player?.id || "").trim();
+      const name = String(player?.name || "").trim().slice(0, 32);
+      const team = player?.team === "A" || player?.team === "B" ? player.team : null;
+      if (!id || !name || !team) {
+        return null;
+      }
+
+      return {
+        id,
+        name,
+        team,
+        active: player?.active !== false,
+      };
+    })
+    .filter(Boolean);
+}
+
 function createInitialState(defaultQuestions = []) {
   const questions = normalizeQuestions(defaultQuestions);
 
@@ -61,6 +85,7 @@ function createInitialState(defaultQuestions = []) {
       buzzerWinner: null,
       revealed: [],
     },
+    players: [],
     ui: {
       showQr: false,
     },
@@ -99,6 +124,7 @@ function validateState(nextState, fallbackQuestions = []) {
         ? nextState.round.revealed.filter((value) => Number.isInteger(value) && value >= 0)
         : [],
     },
+    players: normalizePlayers(nextState.players),
     ui: {
       showQr: Boolean(nextState.ui?.showQr),
     },
@@ -252,6 +278,49 @@ function applyActionLocal(action, payload = {}) {
 
       const fallback = team === "A" ? "Equipo A" : "Equipo B";
       state.teams[team].name = normalizeTeamName(payload.name, fallback);
+      break;
+    }
+    case "REGISTER_PLAYER": {
+      const id = String(payload.id || "").trim();
+      const team = payload.team;
+      const name = String(payload.name || "").trim().slice(0, 32);
+      if (!id || (team !== "A" && team !== "B") || !name) {
+        break;
+      }
+
+      const existingIndex = state.players.findIndex((player) => player.id === id);
+      const nextPlayer = { id, team, name, active: true };
+
+      if (existingIndex >= 0) {
+        state.players[existingIndex] = nextPlayer;
+      } else {
+        state.players.push(nextPlayer);
+      }
+      break;
+    }
+    case "LOGOUT_PLAYER": {
+      const id = String(payload.id || "").trim();
+      if (!id) {
+        break;
+      }
+
+      state.players = state.players.map((player) => {
+        if (player.id !== id) {
+          return player;
+        }
+
+        return {
+          ...player,
+          active: false,
+        };
+      });
+      break;
+    }
+    case "LOGOUT_ALL_PLAYERS": {
+      state.players = state.players.map((player) => ({
+        ...player,
+        active: false,
+      }));
       break;
     }
     case "TOGGLE_QR": {

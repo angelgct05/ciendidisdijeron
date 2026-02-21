@@ -18,8 +18,11 @@ const adminScoreA = document.getElementById("admin-score-a");
 const adminScoreB = document.getElementById("admin-score-b");
 const scoreDeltaInputA = document.getElementById("score-delta-a");
 const scoreDeltaInputB = document.getElementById("score-delta-b");
+const teamMembersA = document.getElementById("team-members-a");
+const teamMembersB = document.getElementById("team-members-b");
 const openBuzzButton = document.getElementById("open-buzz");
 const toggleQrButton = document.getElementById("toggle-qr");
+const logoutAllPlayersButton = document.getElementById("logout-all-players");
 const resetRoundButton = document.getElementById("reset-round");
 const nextQuestionButton = document.getElementById("next-question");
 const prevQuestionButton = document.getElementById("prev-question");
@@ -117,6 +120,35 @@ function syncInputValue(input, value) {
   }
 }
 
+function renderTeamMembers(state, team, container) {
+  const players = (state.players || []).filter((player) => player.active && player.team === team);
+  container.innerHTML = "";
+
+  if (!players.length) {
+    const empty = document.createElement("li");
+    empty.className = "team-member-item team-member-empty";
+    empty.textContent = "Sin integrantes activos";
+    container.appendChild(empty);
+    return;
+  }
+
+  players.forEach((player) => {
+    const item = document.createElement("li");
+    item.className = "team-member-item";
+    item.innerHTML = `
+      <span>${player.name}</span>
+      <button type="button" class="question-action-btn" data-player-logout="${player.id}">Cerrar sesión</button>
+    `;
+
+    const logoutButton = item.querySelector("[data-player-logout]");
+    logoutButton.addEventListener("click", () => {
+      dispatch("LOGOUT_PLAYER", { id: player.id });
+    });
+
+    container.appendChild(item);
+  });
+}
+
 function render(state) {
   const question = state.questions[state.round.questionIndex];
 
@@ -127,6 +159,8 @@ function render(state) {
 
   adminScoreA.textContent = state.teams.A.score;
   adminScoreB.textContent = state.teams.B.score;
+  renderTeamMembers(state, "A", teamMembersA);
+  renderTeamMembers(state, "B", teamMembersB);
   toggleQrButton.textContent = state.ui?.showQr ? "Ocultar QR" : "Mostrar QR";
   prevQuestionButton.disabled = state.round.questionIndex <= 0;
   nextQuestionButton.disabled = state.round.questionIndex >= state.questions.length - 1;
@@ -201,6 +235,9 @@ function attachEvents() {
   toggleQrButton.addEventListener("click", () => {
     const state = getState();
     dispatch("TOGGLE_QR", { value: !state.ui?.showQr });
+  });
+  logoutAllPlayersButton.addEventListener("click", () => {
+    openConfirmModal("¿Seguro que deseas cerrar la sesión de todos los jugadores?", () => dispatch("LOGOUT_ALL_PLAYERS"));
   });
   resetRoundButton.addEventListener("click", () => {
     openConfirmModal("¿Seguro que deseas resetear la ronda actual?", () => dispatch("RESET_ROUND"));

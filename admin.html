@@ -38,6 +38,10 @@
             <input id="score-delta-a" type="number" min="1" step="1" value="10" inputmode="numeric" aria-label="Puntos para Equipo A" />
             <button data-score-action="A:add">Sumar</button>
           </div>
+          <div class="team-members">
+            <h4>Integrantes</h4>
+            <ul id="team-members-a" class="team-members-list"></ul>
+          </div>
         </article>
         <article class="team team-b">
           <h2 id="admin-team-name-b">Equipo B</h2>
@@ -48,6 +52,10 @@
             <input id="score-delta-b" type="number" min="1" step="1" value="10" inputmode="numeric" aria-label="Puntos para Equipo B" />
             <button data-score-action="B:add">Sumar</button>
           </div>
+          <div class="team-members">
+            <h4>Integrantes</h4>
+            <ul id="team-members-b" class="team-members-list"></ul>
+          </div>
         </article>
       </section>
 
@@ -56,6 +64,7 @@
         <div class="control-grid">
           <button id="open-buzz">Abrir Buzzer</button>
           <button id="toggle-qr">Mostrar QR</button>
+          <button id="logout-all-players">Cerrar sesión de jugadores</button>
           <button id="reset-round">Reset Ronda</button>
           <button id="reset-game" class="danger">Reset Partida</button>
         </div>

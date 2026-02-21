@@ -1,4 +1,4 @@
-import { initializeState, subscribe } from "./state.js";
+import { dispatch, initializeState, subscribe } from "./state.js";
 
 const scoreAEl = document.getElementById("score-a");
 const scoreBEl = document.getElementById("score-b");
@@ -9,6 +9,52 @@ const answersListEl = document.getElementById("answers-list");
 const roundLabelEl = document.getElementById("round-label");
 const buzzerStatusEl = document.getElementById("buzzer-status");
 const qrModalEl = document.getElementById("qr-modal");
+const playerGateEl = document.getElementById("player-gate");
+const playerGateFormEl = document.getElementById("player-gate-form");
+const playerNameInputEl = document.getElementById("player-name-input");
+const playerTeamSelectEl = document.getElementById("player-team-select");
+const playerGateErrorEl = document.getElementById("player-gate-error");
+const PLAYER_SESSION_KEY = "fm100_player_session";
+
+let playerRegistered = false;
+
+function loadPlayerSession() {
+  const raw = sessionStorage.getItem(PLAYER_SESSION_KEY);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    const id = String(parsed?.id || "").trim();
+    const name = String(parsed?.name || "").trim();
+    const team = String(parsed?.team || "").trim();
+
+    if (!id || !name || (team !== "A" && team !== "B")) {
+      return null;
+    }
+
+    return { id, name, team };
+  } catch {
+    return null;
+  }
+}
+
+function savePlayerSession(id, name, team) {
+  sessionStorage.setItem(PLAYER_SESSION_KEY, JSON.stringify({ id, name, team }));
+}
+
+function clearPlayerSession() {
+  sessionStorage.removeItem(PLAYER_SESSION_KEY);
+}
+
+function createPlayerId() {
+  if (window.crypto && typeof window.crypto.randomUUID === "function") {
+    return window.crypto.randomUUID();
+  }
+
+  return `p-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+}
 
 async function loadDefaultQuestions() {
   const response = await fetch("./data/questions.json", { cache: "no-store" });
@@ -64,9 +110,14 @@ function render(state) {
 
   teamNameAEl.textContent = state.teams.A.name;
   teamNameBEl.textContent = state.teams.B.name;
+  const optionA = playerTeamSelectEl.querySelector('option[value="A"]');
+  const optionB = playerTeamSelectEl.querySelector('option[value="B"]');
+  optionA.textContent = state.teams.A.name;
+  optionB.textContent = state.teams.B.name;
   scoreAEl.textContent = state.teams.A.score;
   scoreBEl.textContent = state.teams.B.score;
   qrModalEl.classList.toggle("hidden", !state.ui?.showQr);
+  enforcePlayerSession(state);
 
   if (!question) {
     roundLabelEl.textContent = "Sin preguntas";
@@ -82,11 +133,84 @@ function render(state) {
   renderBuzzerState(state);
 }
 
+function enforcePlayerSession(state) {
+  const session = loadPlayerSession();
+  if (!session) {
+    playerRegistered = false;
+    playerGateEl.classList.remove("hidden");
+    return;
+  }
+
+  const current = (state.players || []).find((player) => player.id === session.id);
+  if (current && current.active === false) {
+    clearPlayerSession();
+    playerRegistered = false;
+    playerGateErrorEl.textContent = "Tu sesión fue cerrada por el administrador.";
+    playerGateEl.classList.remove("hidden");
+    return;
+  }
+
+  playerRegistered = true;
+  playerGateEl.classList.add("hidden");
+}
+
+function attachPlayerGateEvents() {
+  const existingSession = loadPlayerSession();
+  if (existingSession) {
+    playerNameInputEl.value = existingSession.name;
+    playerTeamSelectEl.value = existingSession.team;
+    playerRegistered = true;
+    playerGateEl.classList.add("hidden");
+    return;
+  }
+
+  playerNameInputEl.focus();
+
+  playerGateFormEl.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const name = playerNameInputEl.value.trim();
+    const team = playerTeamSelectEl.value;
+    const existing = loadPlayerSession();
+    const playerId = existing?.id || createPlayerId();
+
+    if (!name.length) {
+      playerGateErrorEl.textContent = "Ingresa tu nombre.";
+      return;
+    }
+
+    if (team !== "A" && team !== "B") {
+      playerGateErrorEl.textContent = "Selecciona un equipo.";
+      return;
+    }
+
+    await dispatch("REGISTER_PLAYER", { id: playerId, name, team });
+    savePlayerSession(playerId, name, team);
+    playerRegistered = true;
+    playerGateErrorEl.textContent = "";
+    playerGateEl.classList.add("hidden");
+  });
+}
+
 async function main() {
   try {
+    attachPlayerGateEvents();
     const defaultQuestions = await loadDefaultQuestions();
-    await initializeState(defaultQuestions);
+    const initialState = await initializeState(defaultQuestions);
+
+    const session = loadPlayerSession();
+    if (session) {
+      const existing = (initialState.players || []).find((player) => player.id === session.id);
+      if (!existing) {
+        await dispatch("REGISTER_PLAYER", { id: session.id, name: session.name, team: session.team });
+      }
+    }
+
     subscribe(render);
+
+    if (!playerRegistered) {
+      playerGateEl.classList.remove("hidden");
+    }
   } catch (error) {
     questionTextEl.textContent = "Error cargando la configuración del juego";
     buzzerStatusEl.textContent = error.message;

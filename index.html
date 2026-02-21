@@ -35,6 +35,21 @@
       </section>
     </main>
 
+    <div id="player-gate" class="auth-overlay player-gate">
+      <form id="player-gate-form" class="auth-card" novalidate>
+        <h1>Entrar al Juego</h1>
+        <p>Ingresa tu nombre y selecciona tu equipo para continuar.</p>
+        <input id="player-name-input" type="text" maxlength="32" placeholder="Tu nombre" required />
+        <select id="player-team-select" required>
+          <option value="">Selecciona un equipo</option>
+          <option value="A">Equipo A</option>
+          <option value="B">Equipo B</option>
+        </select>
+        <button type="submit">Continuar</button>
+        <p id="player-gate-error" class="error-text"></p>
+      </form>
+    </div>
+
     <div id="qr-modal" class="mini-modal hidden" aria-hidden="true">
       <img src="./assets/qr-code.png" alt="Código QR" class="qr-modal-image" />
     </div>
