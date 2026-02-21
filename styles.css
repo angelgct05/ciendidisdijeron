@@ -748,4 +748,10 @@ button:disabled {
   .answer-row {
     grid-template-columns: 1fr;
   }
+
+  .captain-card .buzz-btn {
+    min-height: 110px;
+    font-size: 1.35rem;
+    width: 100%;
+  }
 }
