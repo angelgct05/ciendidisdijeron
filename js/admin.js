@@ -99,18 +99,18 @@ function renderSupabaseStatus(status) {
   adminSupabaseStatus.classList.remove("status-connected", "status-connecting", "status-disconnected");
 
   if (status === "connected") {
-    adminSupabaseStatus.textContent = "Supabase: conectado";
+    adminSupabaseStatus.textContent = "Base de Datos: conectado";
     adminSupabaseStatus.classList.add("status-connected");
     return;
   }
 
   if (status === "connecting") {
-    adminSupabaseStatus.textContent = "Supabase: conectando...";
+    adminSupabaseStatus.textContent = "Base de Datos: conectando...";
     adminSupabaseStatus.classList.add("status-connecting");
     return;
   }
 
-  adminSupabaseStatus.textContent = "Supabase: no conectado";
+  adminSupabaseStatus.textContent = "Base de Datos: no conectado";
   adminSupabaseStatus.classList.add("status-disconnected");
 }
 

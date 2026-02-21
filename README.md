@@ -35,7 +35,7 @@ Juego web estático con:
 
 Listo: Vercel servirá `index.html` como página principal y podrás abrir `/admin.html` para el panel de control.
 
-## Supabase (tabla dedicada de preguntas)
+## Base de Datos (tabla dedicada de preguntas)
 
 El CRUD de preguntas/respuestas usa la tabla dedicada `game_questions`.
 

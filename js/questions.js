@@ -20,6 +20,9 @@ const questionModalInput = document.getElementById("question-modal-input");
 const questionModalError = document.getElementById("question-modal-error");
 const questionModalCancel = document.getElementById("question-modal-cancel");
 const questionModalSave = document.getElementById("question-modal-save");
+const successModal = document.getElementById("success-modal");
+const successModalMessage = document.getElementById("success-modal-message");
+const successModalClose = document.getElementById("success-modal-close");
 
 let currentState = null;
 let sortBy = "index";
@@ -77,6 +80,15 @@ function closeQuestionModal() {
   modalQuestionBase = null;
 }
 
+function openSuccessModal(message) {
+  successModalMessage.textContent = message;
+  successModal.classList.remove("hidden");
+}
+
+function closeSuccessModal() {
+  successModal.classList.add("hidden");
+}
+
 async function saveQuestionFromModal() {
   const questionText = questionModalInput.value.trim();
   if (!questionText) {
@@ -103,7 +115,7 @@ async function saveQuestionFromModal() {
 
     closeQuestionModal();
   } catch (error) {
-    questionModalError.textContent = error?.message || "No se pudo guardar en Supabase.";
+    questionModalError.textContent = error?.message || "No se pudo guardar en Base de Datos.";
   }
 }
 
@@ -190,7 +202,7 @@ function renderQuestionList(state) {
           expandedQuestionIndex = null;
         }
       } catch (error) {
-        summaryEl.textContent = error?.message || "No se pudo eliminar en Supabase.";
+        summaryEl.textContent = error?.message || "No se pudo eliminar en Base de Datos.";
       }
     });
 
@@ -314,8 +326,9 @@ function renderQuestionList(state) {
             },
           });
           summaryEl.textContent = "Respuestas guardadas correctamente.";
+          openSuccessModal("Las respuestas se guardaron correctamente en Base de Datos.");
         } catch (error) {
-          summaryEl.textContent = error?.message || "No se pudieron guardar las respuestas en Supabase.";
+          summaryEl.textContent = error?.message || "No se pudieron guardar las respuestas en Base de Datos.";
         }
       });
 
@@ -336,15 +349,15 @@ function render(state) {
 
   if (!state.questions.length) {
     summaryEl.textContent = isSupabaseConnected()
-      ? "No hay preguntas aún. Crea la primera (guardado en Supabase)."
-      : "No hay conexión con Supabase para guardar preguntas.";
+      ? "No hay preguntas aún. Crea la primera (guardado en Base de Datos)."
+      : "No hay conexión con Base de Datos para guardar preguntas.";
     questionItems.innerHTML = "";
     return;
   }
 
   summaryEl.textContent = isSupabaseConnected()
-    ? `Total de preguntas: ${state.questions.length} · Guardado en Supabase`
-    : `Total de preguntas: ${state.questions.length} · Sin conexión a Supabase`;
+    ? `Total de preguntas: ${state.questions.length} · Guardado en Base de Datos`
+    : `Total de preguntas: ${state.questions.length} · Sin conexión a Base de Datos`;
 
   renderQuestionList(state);
 }
@@ -384,10 +397,22 @@ function attachEvents() {
 
   questionModalCancel.addEventListener("click", closeQuestionModal);
   questionModalSave.addEventListener("click", saveQuestionFromModal);
+  successModalClose.addEventListener("click", closeSuccessModal);
+  successModal.addEventListener("click", (event) => {
+    if (event.target === successModal) {
+      closeSuccessModal();
+    }
+  });
   questionModalInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
       saveQuestionFromModal();
+    }
+  });
+
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !successModal.classList.contains("hidden")) {
+      closeSuccessModal();
     }
   });
 

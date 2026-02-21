@@ -16,6 +16,7 @@ const playerNameInputEl = document.getElementById("player-name-input");
 const playerTeamSelectEl = document.getElementById("player-team-select");
 const playerGateErrorEl = document.getElementById("player-gate-error");
 const PLAYER_SESSION_KEY = "fm100_player_session";
+const ADMIN_AUTH_KEY = "fm100_admin_auth";
 
 let playerRegistered = false;
 let redirectingToCaptain = false;
@@ -56,6 +57,10 @@ function createPlayerId() {
   }
 
   return `p-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+}
+
+function isAdminSession() {
+  return localStorage.getItem(ADMIN_AUTH_KEY) === "1";
 }
 
 async function loadDefaultQuestions() {
@@ -118,7 +123,9 @@ function render(state) {
   optionB.textContent = state.teams.B.name;
 
   const session = loadPlayerSession();
-  if (session) {
+  if (isAdminSession()) {
+    playerIdentityEl.innerHTML = "<span class=\"player-identity-value\">Administrador</span>";
+  } else if (session) {
     const teamName = session.team === "A" ? state.teams.A.name : state.teams.B.name;
     playerIdentityEl.innerHTML = `Jugador: <span class="player-identity-value">${session.name}</span> | Equipo: <span class="player-identity-value">${teamName}</span>`;
   } else {
@@ -150,6 +157,10 @@ function maybeRedirectCaptain(state) {
     return;
   }
 
+  if (isAdminSession()) {
+    return;
+  }
+
   const session = loadPlayerSession();
   if (!session) {
     return;
@@ -163,6 +174,12 @@ function maybeRedirectCaptain(state) {
 }
 
 function enforcePlayerSession(state) {
+  if (isAdminSession()) {
+    playerRegistered = true;
+    playerGateEl.classList.add("hidden");
+    return;
+  }
+
   const session = loadPlayerSession();
   if (!session) {
     playerRegistered = false;
@@ -184,6 +201,12 @@ function enforcePlayerSession(state) {
 }
 
 function attachPlayerGateEvents() {
+  if (isAdminSession()) {
+    playerRegistered = true;
+    playerGateEl.classList.add("hidden");
+    return;
+  }
+
   const existingSession = loadPlayerSession();
   if (existingSession) {
     playerNameInputEl.value = existingSession.name;
@@ -228,7 +251,7 @@ async function main() {
     const initialState = await initializeState(defaultQuestions);
 
     const session = loadPlayerSession();
-    if (session) {
+    if (!isAdminSession() && session) {
       const existing = (initialState.players || []).find((player) => player.id === session.id);
       if (!existing) {
         await dispatch("REGISTER_PLAYER", { id: session.id, name: session.name, team: session.team });

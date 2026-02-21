@@ -678,7 +678,7 @@ async function dispatchAsync(action, payload = {}) {
   }
 
   if (QUESTION_ACTIONS.has(action) && !supabaseEnabled) {
-    throw new Error("No hay conexión con Supabase. No se puede guardar preguntas en modo local.");
+    throw new Error("No hay conexión con Base de Datos. No se puede guardar preguntas en modo local.");
   }
 
   if (supabaseEnabled && action === "LOCK_BUZZ") {
@@ -714,7 +714,7 @@ async function dispatchAsync(action, payload = {}) {
       setConnectionStatus("disconnected");
       state = previousState;
       persistAndNotify(true);
-      throw new Error("No se pudo guardar preguntas/respuestas en Supabase.");
+        throw new Error("No se pudo guardar preguntas/respuestas en Base de Datos.");
     }
   }
 
@@ -725,7 +725,7 @@ async function dispatchAsync(action, payload = {}) {
       if (QUESTION_ACTIONS.has(action)) {
         state = previousState;
         persistAndNotify(true);
-        throw new Error("No se pudo guardar en Supabase. Verifica conexión y permisos.");
+        throw new Error("No se pudo guardar en Base de Datos. Verifica conexión y permisos.");
       }
       persistAndNotify(true);
       return getState();
