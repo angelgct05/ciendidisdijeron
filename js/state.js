@@ -77,6 +77,7 @@ function createInitialState(defaultQuestions = []) {
 
   return {
     version: 1,
+    stateVersion: 0,
     teams: {
       A: { name: "Equipo A", score: 0 },
       B: { name: "Equipo B", score: 0 },
@@ -111,6 +112,7 @@ function validateState(nextState, fallbackQuestions = []) {
 
   return {
     version: 1,
+    stateVersion: Number.isFinite(Number(nextState.stateVersion)) ? Number(nextState.stateVersion) : 0,
     teams: {
       A: {
         name: normalizeTeamName(nextState.teams?.A?.name, "Equipo A"),
@@ -145,6 +147,21 @@ function validateState(nextState, fallbackQuestions = []) {
     },
     updatedAt: Number(nextState.updatedAt) || Date.now(),
   };
+}
+
+function isRemoteStateNewer(remote, local) {
+  if (!local) {
+    return true;
+  }
+
+  const remoteVersion = Number(remote.stateVersion) || 0;
+  const localVersion = Number(local.stateVersion) || 0;
+
+  if (remoteVersion !== localVersion) {
+    return remoteVersion > localVersion;
+  }
+
+  return Number(remote.updatedAt) >= Number(local.updatedAt);
 }
 
 function persistAndNotify(shouldBroadcast = true) {
@@ -190,7 +207,7 @@ function setupChannel() {
     }
 
     const remoteState = validateState(event.data.payload, state?.questions || []);
-    if (!state || remoteState.updatedAt >= state.updatedAt) {
+    if (isRemoteStateNewer(remoteState, state)) {
       state = remoteState;
       persistAndNotify(false);
     }
@@ -541,7 +558,7 @@ async function runRoomSyncCycle() {
     }
 
     const nextState = validateState(remoteState, state?.questions || []);
-    if (!state || nextState.updatedAt > state.updatedAt) {
+    if (isRemoteStateNewer(nextState, state)) {
       state = nextState;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       notifyOnly();
@@ -683,7 +700,7 @@ async function setupSupabase(defaultQuestions = []) {
         },
         (payload) => {
           const nextState = validateState(payload?.new?.state, state?.questions || []);
-          if (!state || nextState.updatedAt >= state.updatedAt) {
+          if (isRemoteStateNewer(nextState, state)) {
             state = nextState;
             localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
             notifyOnly();
@@ -764,6 +781,7 @@ async function dispatchAsync(action, payload = {}) {
   }
 
   if (supabaseEnabled && action === "LOCK_BUZZ") {
+    const previousVersion = Number(state.stateVersion) || 0;
     const team = payload.team;
     if (team !== "A" && team !== "B") {
       return getState();
@@ -778,6 +796,10 @@ async function dispatchAsync(action, payload = {}) {
       const result = data[0];
       if (result?.state) {
         state = validateState(result.state, state.questions || []);
+        if ((Number(state.stateVersion) || 0) <= previousVersion) {
+          state.stateVersion = previousVersion + 1;
+          await upsertRoomState(state);
+        }
         persistAndNotify(true);
       }
       return getState();
@@ -788,6 +810,7 @@ async function dispatchAsync(action, payload = {}) {
 
   const previousState = clone(state);
 
+  state.stateVersion = (Number(state.stateVersion) || 0) + 1;
   applyActionLocal(action, payload);
 
   if (QUESTION_ACTIONS.has(action) && supabaseEnabled) {
