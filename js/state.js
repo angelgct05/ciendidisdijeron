@@ -88,6 +88,7 @@ function createInitialState(defaultQuestions = []) {
       status: "idle",
       buzzerWinner: null,
       revealed: [],
+      pointsMultiplier: 1,
       captains: {
         A: null,
         B: null,
@@ -137,6 +138,9 @@ function validateState(nextState, fallbackQuestions = []) {
       revealed: Array.isArray(nextState.round?.revealed)
         ? nextState.round.revealed.filter((value) => Number.isInteger(value) && value >= 0)
         : [],
+      pointsMultiplier: [1, 2, 3].includes(Number(nextState.round?.pointsMultiplier))
+        ? Number(nextState.round.pointsMultiplier)
+        : 1,
       captains: {
         A: typeof nextState.round?.captains?.A === "string" ? nextState.round.captains.A : null,
         B: typeof nextState.round?.captains?.B === "string" ? nextState.round.captains.B : null,
@@ -267,6 +271,7 @@ function resetRoundInternals() {
   state.round.status = "idle";
   state.round.buzzerWinner = null;
   state.round.revealed = [];
+  state.round.pointsMultiplier = 1;
   state.round.captains = {
     A: null,
     B: null,
@@ -380,6 +385,15 @@ function applyActionLocal(action, payload = {}) {
       }
 
       state.round.captains[team] = playerId;
+      break;
+    }
+    case "SET_ROUND_MULTIPLIER": {
+      const value = Number(payload.multiplier);
+      if (![1, 2, 3].includes(value)) {
+        break;
+      }
+
+      state.round.pointsMultiplier = value;
       break;
     }
     case "LOGOUT_PLAYER": {

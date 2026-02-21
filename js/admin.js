@@ -28,6 +28,7 @@ const openBuzzButton = document.getElementById("open-buzz");
 const toggleQrButton = document.getElementById("toggle-qr");
 const awardRevealedPointsButton = document.getElementById("award-revealed-points");
 const logoutAllPlayersButton = document.getElementById("logout-all-players");
+const roundMultiplierSelect = document.getElementById("round-multiplier-select");
 const resetRoundButton = document.getElementById("reset-round");
 const nextQuestionButton = document.getElementById("next-question");
 const prevQuestionButton = document.getElementById("prev-question");
@@ -35,6 +36,7 @@ const resetGameButton = document.getElementById("reset-game");
 const adminSupabaseStatus = document.getElementById("admin-supabase-status");
 const adminBuzzerStatus = document.getElementById("admin-buzzer-status");
 const adminRoundControl = document.getElementById("admin-round-control");
+const adminRoundMultiplier = document.getElementById("admin-round-multiplier");
 const adminRoundLabel = document.getElementById("admin-round-label");
 const adminQuestionText = document.getElementById("admin-question-text");
 const adminAnswersList = document.getElementById("admin-answers-list");
@@ -216,6 +218,11 @@ function render(state) {
   }
 
   const revealedPoints = getRevealedPointsTotal(state);
+  const multiplier = [1, 2, 3].includes(Number(state.round.pointsMultiplier)) ? Number(state.round.pointsMultiplier) : 1;
+  adminRoundMultiplier.textContent = `Multiplicador actual: x${multiplier}`;
+  if (document.activeElement !== roundMultiplierSelect) {
+    roundMultiplierSelect.value = String(multiplier);
+  }
   awardRevealedPointsButton.disabled = !(controlTeam === "A" || controlTeam === "B") || revealedPoints <= 0;
   prevQuestionButton.disabled = state.round.questionIndex <= 0;
   nextQuestionButton.disabled = state.round.questionIndex >= state.questions.length - 1;
@@ -305,7 +312,17 @@ function attachEvents() {
       return;
     }
 
-    dispatch("ADD_SCORE", { team: controlTeam, points });
+    const multiplier = [1, 2, 3].includes(Number(state.round.pointsMultiplier)) ? Number(state.round.pointsMultiplier) : 1;
+
+    dispatch("ADD_SCORE", { team: controlTeam, points: points * multiplier });
+  });
+  roundMultiplierSelect.addEventListener("change", () => {
+    const value = Number(roundMultiplierSelect.value);
+    if (![1, 2, 3].includes(value)) {
+      return;
+    }
+
+    dispatch("SET_ROUND_MULTIPLIER", { multiplier: value });
   });
   logoutAllPlayersButton.addEventListener("click", () => {
     openConfirmModal("¿Seguro que deseas cerrar la sesión de todos los jugadores?", () => dispatch("LOGOUT_ALL_PLAYERS"));

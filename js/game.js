@@ -12,6 +12,7 @@ const answersListEl = document.getElementById("answers-list");
 const roundLabelEl = document.getElementById("round-label");
 const buzzerStatusEl = document.getElementById("buzzer-status");
 const roundControlIndicatorEl = document.getElementById("round-control-indicator");
+const roundMultiplierIndicatorEl = document.getElementById("round-multiplier-indicator");
 const qrModalEl = document.getElementById("qr-modal");
 const teamBackModalEl = document.getElementById("team-back-modal");
 const teamBackAcceptButton = document.getElementById("team-back-accept");
@@ -158,6 +159,9 @@ function render(state) {
   } else {
     roundControlIndicatorEl.textContent = "Control de ronda: sin equipo";
   }
+
+  const multiplier = [1, 2, 3].includes(Number(state.round.pointsMultiplier)) ? Number(state.round.pointsMultiplier) : 1;
+  roundMultiplierIndicatorEl.textContent = `Multiplicador actual: x${multiplier}`;
 
   qrModalEl.classList.toggle("hidden", !state.ui?.showQr);
   enforcePlayerSession(state);

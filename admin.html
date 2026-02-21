@@ -69,6 +69,14 @@
 
       <section class="admin-controls">
         <h3>Control de Ronda</h3>
+        <div class="round-multiplier-row">
+          <label for="round-multiplier-select">Multiplicador de ronda</label>
+          <select id="round-multiplier-select" class="round-multiplier-select">
+            <option value="1">Normal (x1)</option>
+            <option value="2">Doble (x2)</option>
+            <option value="3">Triple (x3)</option>
+          </select>
+        </div>
         <div class="control-grid">
           <button id="open-buzz">Abrir Buzzer</button>
           <button id="toggle-qr">Mostrar QR</button>
@@ -78,6 +86,7 @@
         </div>
         <p id="admin-buzzer-status" class="buzzer-status"></p>
         <p id="admin-round-control" class="round-control-indicator">Control de ronda: sin equipo</p>
+        <p id="admin-round-multiplier" class="round-multiplier-indicator">Multiplicador actual: x1</p>
       </section>
 
       <section class="question-card">
