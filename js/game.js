@@ -158,8 +158,8 @@ function render(state) {
   strikesBEl.textContent = String(state.teams.B.strikes || 0);
 
   const controlTeam = state.round.buzzerWinner;
-  teamControlBadgeAEl.textContent = controlTeam === "A" ? "CON CONTROL" : "";
-  teamControlBadgeBEl.textContent = controlTeam === "B" ? "CON CONTROL" : "";
+  teamControlBadgeAEl.textContent = controlTeam === "A" ? "TIENEN EL CONTROL" : "";
+  teamControlBadgeBEl.textContent = controlTeam === "B" ? "TIENEN EL CONTROL" : "";
   if (controlTeam === "A" || controlTeam === "B") {
     teamControlBadgeAEl.classList.toggle("active", controlTeam === "A");
     teamControlBadgeBEl.classList.toggle("active", controlTeam === "B");

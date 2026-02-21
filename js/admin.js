@@ -12,6 +12,8 @@ const logoutAdminButton = document.getElementById("logout-admin");
 
 const adminTeamNameA = document.getElementById("admin-team-name-a");
 const adminTeamNameB = document.getElementById("admin-team-name-b");
+const adminTeamControlBadgeA = document.getElementById("admin-team-control-badge-a");
+const adminTeamControlBadgeB = document.getElementById("admin-team-control-badge-b");
 const teamNameInputA = document.getElementById("team-name-a-input");
 const teamNameInputB = document.getElementById("team-name-b-input");
 const adminScoreA = document.getElementById("admin-score-a");
@@ -36,8 +38,6 @@ const prevQuestionButton = document.getElementById("prev-question");
 const resetGameButton = document.getElementById("reset-game");
 const adminSupabaseStatus = document.getElementById("admin-supabase-status");
 const adminBuzzerStatus = document.getElementById("admin-buzzer-status");
-const adminRoundControl = document.getElementById("admin-round-control");
-const adminRoundMultiplier = document.getElementById("admin-round-multiplier");
 const adminRoundLabel = document.getElementById("admin-round-label");
 const adminQuestionText = document.getElementById("admin-question-text");
 const adminAnswersList = document.getElementById("admin-answers-list");
@@ -95,7 +95,7 @@ function renderBuzzerInfo(state) {
   }
 
   if (state.round.status === "locked" && state.round.buzzerWinner) {
-    adminBuzzerStatus.textContent = "Buzzer bloqueado.";
+    adminBuzzerStatus.textContent = "";
     adminBuzzerStatus.classList.add("warn");
     return;
   }
@@ -211,17 +211,19 @@ function render(state) {
   renderTeamMembers(state, "B", teamMembersB);
   toggleQrButton.textContent = state.ui?.showQr ? "Ocultar QR" : "Mostrar QR";
   const controlTeam = state.round.buzzerWinner;
+  adminTeamControlBadgeA.textContent = controlTeam === "A" ? "TIENEN EL CONTROL" : "";
+  adminTeamControlBadgeB.textContent = controlTeam === "B" ? "TIENEN EL CONTROL" : "";
   if (controlTeam === "A" || controlTeam === "B") {
-    const controlName = state.teams[controlTeam]?.name || `Equipo ${controlTeam}`;
-    adminRoundControl.textContent = `Control de ronda: ${controlName}`;
+    adminTeamControlBadgeA.classList.toggle("active", controlTeam === "A");
+    adminTeamControlBadgeB.classList.toggle("active", controlTeam === "B");
   } else {
-    adminRoundControl.textContent = "Control de ronda: sin equipo";
+    adminTeamControlBadgeA.classList.remove("active");
+    adminTeamControlBadgeB.classList.remove("active");
   }
   switchRoundControlButton.disabled = !(controlTeam === "A" || controlTeam === "B");
 
   const revealedPoints = getRevealedPointsTotal(state);
   const multiplier = [1, 2, 3].includes(Number(state.round.pointsMultiplier)) ? Number(state.round.pointsMultiplier) : 1;
-  adminRoundMultiplier.textContent = `Multiplicador actual: x${multiplier}`;
   if (document.activeElement !== roundMultiplierSelect) {
     roundMultiplierSelect.value = String(multiplier);
   }
