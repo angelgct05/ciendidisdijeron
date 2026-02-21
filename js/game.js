@@ -236,11 +236,17 @@ function attachPlayerGateEvents() {
       return;
     }
 
-    await dispatch("REGISTER_PLAYER", { id: playerId, name, team });
     savePlayerSession(playerId, name, team);
-    playerRegistered = true;
-    playerGateErrorEl.textContent = "";
-    playerGateEl.classList.add("hidden");
+
+    try {
+      await dispatch("REGISTER_PLAYER", { id: playerId, name, team });
+      playerRegistered = true;
+      playerGateErrorEl.textContent = "";
+      playerGateEl.classList.add("hidden");
+    } catch (error) {
+      clearPlayerSession();
+      playerGateErrorEl.textContent = error?.message || "No se pudo registrar tu sesión.";
+    }
   });
 }
 
