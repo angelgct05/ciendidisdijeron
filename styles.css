@@ -114,6 +114,30 @@ h1, h2, h3, h4, p {
   margin-bottom: 0.35rem;
 }
 
+.question-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.question-header-row .badge {
+  margin-bottom: 0;
+}
+
+.team-control-badge {
+  min-height: 1.25rem;
+  margin: 0 0 0.2rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: transparent;
+}
+
+.team-control-badge.active {
+  color: var(--accent);
+}
+
 .questions-table-wrap {
   max-height: none;
   overflow-x: auto;
@@ -374,6 +398,13 @@ h1, h2, h3, h4, p {
   justify-self: center;
 }
 
+.question-center-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
 .question-nav-controls #next-question {
   justify-self: end;
 }
@@ -528,6 +559,10 @@ button:disabled {
 .round-multiplier-indicator {
   color: var(--muted);
   font-weight: 700;
+}
+
+.question-header-row .round-multiplier-indicator {
+  color: var(--accent);
 }
 
 .status-badge {
@@ -905,6 +940,23 @@ button:disabled {
 
   .answer-row {
     grid-template-columns: 1fr;
+  }
+
+  .question-nav-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .question-center-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .question-nav-controls #prev-question,
+  .question-nav-controls #award-revealed-points,
+  .question-nav-controls #steal-revealed-points,
+  .question-nav-controls #next-question {
+    justify-self: stretch;
+    width: 100%;
   }
 
   .captain-card .buzz-btn {

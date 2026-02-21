@@ -27,6 +27,7 @@ const teamMembersB = document.getElementById("team-members-b");
 const toggleQrButton = document.getElementById("toggle-qr");
 const switchRoundControlButton = document.getElementById("switch-round-control");
 const awardRevealedPointsButton = document.getElementById("award-revealed-points");
+const stealRevealedPointsButton = document.getElementById("steal-revealed-points");
 const logoutAllPlayersButton = document.getElementById("logout-all-players");
 const roundMultiplierSelect = document.getElementById("round-multiplier-select");
 const resetRoundButton = document.getElementById("reset-round");
@@ -88,7 +89,7 @@ function renderBuzzerInfo(state) {
   adminBuzzerStatus.classList.remove("ok", "warn");
 
   if (state.round.status === "buzz-open") {
-    adminBuzzerStatus.textContent = "Buzzer abierto.";
+    adminBuzzerStatus.textContent = "";
     adminBuzzerStatus.classList.add("ok");
     return;
   }
@@ -225,6 +226,7 @@ function render(state) {
     roundMultiplierSelect.value = String(multiplier);
   }
   awardRevealedPointsButton.disabled = !(controlTeam === "A" || controlTeam === "B") || revealedPoints <= 0;
+  stealRevealedPointsButton.disabled = !(controlTeam === "A" || controlTeam === "B") || revealedPoints <= 0;
   prevQuestionButton.disabled = state.round.questionIndex <= 0;
   nextQuestionButton.disabled = state.round.questionIndex >= state.questions.length - 1;
 
@@ -316,6 +318,23 @@ function attachEvents() {
     const multiplier = [1, 2, 3].includes(Number(state.round.pointsMultiplier)) ? Number(state.round.pointsMultiplier) : 1;
 
     dispatch("ADD_SCORE", { team: controlTeam, points: points * multiplier });
+  });
+  stealRevealedPointsButton.addEventListener("click", () => {
+    const state = getState();
+    const controlTeam = state.round.buzzerWinner;
+    if (controlTeam !== "A" && controlTeam !== "B") {
+      return;
+    }
+
+    const targetTeam = controlTeam === "A" ? "B" : "A";
+    const points = getRevealedPointsTotal(state);
+    if (points <= 0) {
+      return;
+    }
+
+    const multiplier = [1, 2, 3].includes(Number(state.round.pointsMultiplier)) ? Number(state.round.pointsMultiplier) : 1;
+
+    dispatch("ADD_SCORE", { team: targetTeam, points: points * multiplier });
   });
   roundMultiplierSelect.addEventListener("change", () => {
     const value = Number(roundMultiplierSelect.value);

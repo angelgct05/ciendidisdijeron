@@ -15,11 +15,13 @@
 
       <section class="scoreboard">
         <article class="team team-a">
+          <p id="team-control-badge-a" class="team-control-badge" aria-live="polite"></p>
           <h2 id="team-name-a">Equipo A</h2>
           <p id="score-a" class="score">0</p>
           <p class="strikes-readonly">Strikes: <strong id="strikes-a">0</strong></p>
         </article>
         <article class="team team-b">
+          <p id="team-control-badge-b" class="team-control-badge" aria-live="polite"></p>
           <h2 id="team-name-b">Equipo B</h2>
           <p id="score-b" class="score">0</p>
           <p class="strikes-readonly">Strikes: <strong id="strikes-b">0</strong></p>
@@ -27,15 +29,16 @@
       </section>
 
       <section class="question-card">
-        <p class="badge" id="round-label">Pregunta 1</p>
+        <div class="question-header-row">
+          <p class="badge" id="round-label">Pregunta 1</p>
+          <p id="round-multiplier-indicator" class="round-multiplier-indicator">x1</p>
+        </div>
         <h3 id="question-text">Cargando pregunta...</h3>
         <ul id="answers-list" class="answers-list game-answers-list"></ul>
       </section>
 
       <section class="buzzer-card">
         <p id="buzzer-status" class="buzzer-status"></p>
-        <p id="round-control-indicator" class="round-control-indicator">Control de ronda: sin equipo</p>
-        <p id="round-multiplier-indicator" class="round-multiplier-indicator">Multiplicador actual: x1</p>
       </section>
     </main>
 

@@ -4,6 +4,8 @@ const scoreAEl = document.getElementById("score-a");
 const scoreBEl = document.getElementById("score-b");
 const strikesAEl = document.getElementById("strikes-a");
 const strikesBEl = document.getElementById("strikes-b");
+const teamControlBadgeAEl = document.getElementById("team-control-badge-a");
+const teamControlBadgeBEl = document.getElementById("team-control-badge-b");
 const teamNameAEl = document.getElementById("team-name-a");
 const teamNameBEl = document.getElementById("team-name-b");
 const playerIdentityEl = document.getElementById("player-identity");
@@ -11,7 +13,6 @@ const questionTextEl = document.getElementById("question-text");
 const answersListEl = document.getElementById("answers-list");
 const roundLabelEl = document.getElementById("round-label");
 const buzzerStatusEl = document.getElementById("buzzer-status");
-const roundControlIndicatorEl = document.getElementById("round-control-indicator");
 const roundMultiplierIndicatorEl = document.getElementById("round-multiplier-indicator");
 const qrModalEl = document.getElementById("qr-modal");
 const teamBackModalEl = document.getElementById("team-back-modal");
@@ -157,15 +158,18 @@ function render(state) {
   strikesBEl.textContent = String(state.teams.B.strikes || 0);
 
   const controlTeam = state.round.buzzerWinner;
+  teamControlBadgeAEl.textContent = controlTeam === "A" ? "CON CONTROL" : "";
+  teamControlBadgeBEl.textContent = controlTeam === "B" ? "CON CONTROL" : "";
   if (controlTeam === "A" || controlTeam === "B") {
-    const controlName = state.teams[controlTeam]?.name || `Equipo ${controlTeam}`;
-    roundControlIndicatorEl.textContent = `Control de ronda: ${controlName}`;
+    teamControlBadgeAEl.classList.toggle("active", controlTeam === "A");
+    teamControlBadgeBEl.classList.toggle("active", controlTeam === "B");
   } else {
-    roundControlIndicatorEl.textContent = "Control de ronda: sin equipo";
+    teamControlBadgeAEl.classList.remove("active");
+    teamControlBadgeBEl.classList.remove("active");
   }
 
   const multiplier = [1, 2, 3].includes(Number(state.round.pointsMultiplier)) ? Number(state.round.pointsMultiplier) : 1;
-  roundMultiplierIndicatorEl.textContent = `Multiplicador actual: x${multiplier}`;
+  roundMultiplierIndicatorEl.textContent = `x${multiplier}`;
 
   qrModalEl.classList.toggle("hidden", !state.ui?.showQr);
   enforcePlayerSession(state);
