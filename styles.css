@@ -75,7 +75,7 @@ h1, h2, h3, h4, p {
 }
 
 .score {
-  font-size: clamp(1.8rem, 4vw, 3rem);
+  font-size: clamp(2.35rem, 5.4vw, 4.35rem);
   font-weight: 700;
   color: var(--accent);
 }
@@ -100,10 +100,12 @@ h1, h2, h3, h4, p {
   margin-top: 0.2rem;
   font-weight: 700;
   color: var(--muted);
+  font-size: clamp(1.05rem, 2.2vw, 1.45rem);
 }
 
 .strikes-readonly strong {
   color: var(--accent);
+  font-size: 1.2em;
 }
 
 .badge {
@@ -293,19 +295,13 @@ h1, h2, h3, h4, p {
 .game-answers-list .answer-item.revealed {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  justify-content: space-between;
+  gap: 0.8rem;
 }
 
 .game-answers-list .answer-text {
   text-transform: uppercase;
   line-height: 1;
-}
-
-.game-answers-list .answer-leader {
-  flex: 1;
-  min-width: 0;
-  border-bottom: 0.22em dotted currentColor;
-  transform: translateY(0.08em);
 }
 
 .game-answers-list .answer-points {
@@ -316,15 +312,13 @@ h1, h2, h3, h4, p {
 }
 
 .game-answers-list .answer-item.hidden-answer {
-  color: var(--accent);
-  justify-content: center;
+  color: transparent;
 }
 
-.game-answers-list .answer-dots {
+.game-answers-list .answer-hidden-placeholder {
   display: block;
   width: 100%;
-  border-bottom: 0.24em dotted currentColor;
-  transform: translateY(0.08em);
+  min-height: 1em;
 }
 
 .admin-answer-item {

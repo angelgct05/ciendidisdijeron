@@ -100,11 +100,10 @@ function renderAnswers(state) {
     if (visible) {
       item.innerHTML = `
         <span class="answer-text">${answer.text}</span>
-        <span class="answer-leader" aria-hidden="true"></span>
         <strong class="answer-points">${answer.points}</strong>
       `;
     } else {
-      item.innerHTML = '<span class="answer-dots" aria-label="Respuesta oculta"></span>';
+      item.innerHTML = '<span class="answer-hidden-placeholder" aria-hidden="true"></span>';
     }
 
     answersListEl.appendChild(item);
@@ -118,7 +117,7 @@ function renderBuzzerState(state) {
   buzzerStatusEl.classList.remove("ok", "warn");
 
   if (isOpen) {
-    buzzerStatusEl.textContent = "Buzzer abierto: ¡presionen ahora!";
+    buzzerStatusEl.textContent = "";
     buzzerStatusEl.classList.add("ok");
     return;
   }
