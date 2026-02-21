@@ -24,7 +24,6 @@ const scoreDeltaInputA = document.getElementById("score-delta-a");
 const scoreDeltaInputB = document.getElementById("score-delta-b");
 const teamMembersA = document.getElementById("team-members-a");
 const teamMembersB = document.getElementById("team-members-b");
-const openBuzzButton = document.getElementById("open-buzz");
 const toggleQrButton = document.getElementById("toggle-qr");
 const switchRoundControlButton = document.getElementById("switch-round-control");
 const awardRevealedPointsButton = document.getElementById("award-revealed-points");
@@ -293,9 +292,6 @@ function attachEvents() {
     enableAdmin();
   });
 
-  openBuzzButton.addEventListener("click", () => {
-    dispatch("OPEN_BUZZ");
-  });
   toggleQrButton.addEventListener("click", () => {
     const state = getState();
     dispatch("TOGGLE_QR", { value: !state.ui?.showQr });

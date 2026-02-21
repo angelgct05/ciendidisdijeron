@@ -124,7 +124,7 @@ function renderBuzzerState(state) {
     return;
   }
 
-  buzzerStatusEl.textContent = "Esperando al administrador para abrir buzzer";
+  buzzerStatusEl.textContent = "";
 }
 
 function render(state) {

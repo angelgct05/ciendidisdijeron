@@ -85,7 +85,7 @@ function createInitialState(defaultQuestions = []) {
     questions,
     round: {
       questionIndex: 0,
-      status: "idle",
+      status: "buzz-open",
       buzzerWinner: null,
       revealed: [],
       pointsMultiplier: 1,
@@ -113,6 +113,12 @@ function validateState(nextState, fallbackQuestions = []) {
   const questions = normalizeQuestions(nextState.questions?.length ? nextState.questions : fallbackQuestions);
   const maxQuestionIndex = Math.max(0, questions.length - 1);
 
+  const parsedStatus = ["idle", "buzz-open", "locked", "round-end"].includes(nextState.round?.status)
+    ? nextState.round.status
+    : "idle";
+  const parsedBuzzerWinner = ["A", "B", null].includes(nextState.round?.buzzerWinner) ? nextState.round.buzzerWinner : null;
+  const effectiveRoundStatus = parsedBuzzerWinner ? "locked" : "buzz-open";
+
   return {
     version: 1,
     stateVersion: Number.isFinite(Number(nextState.stateVersion)) ? Number(nextState.stateVersion) : 0,
@@ -131,10 +137,8 @@ function validateState(nextState, fallbackQuestions = []) {
     questions,
     round: {
       questionIndex: Math.min(Math.max(Number(nextState.round?.questionIndex) || 0, 0), maxQuestionIndex),
-      status: ["idle", "buzz-open", "locked", "round-end"].includes(nextState.round?.status)
-        ? nextState.round.status
-        : "idle",
-      buzzerWinner: ["A", "B", null].includes(nextState.round?.buzzerWinner) ? nextState.round.buzzerWinner : null,
+      status: parsedStatus === "round-end" ? "round-end" : effectiveRoundStatus,
+      buzzerWinner: parsedBuzzerWinner,
       revealed: Array.isArray(nextState.round?.revealed)
         ? nextState.round.revealed.filter((value) => Number.isInteger(value) && value >= 0)
         : [],
@@ -268,7 +272,7 @@ function clampQuestionIndex(nextIndex) {
 }
 
 function resetRoundInternals() {
-  state.round.status = "idle";
+  state.round.status = "buzz-open";
   state.round.buzzerWinner = null;
   state.round.revealed = [];
   state.round.pointsMultiplier = 1;
