@@ -11,6 +11,49 @@ const teamBackModalEl = document.getElementById("team-back-modal");
 const teamBackAcceptButton = document.getElementById("team-back-accept");
 const PLAYER_SESSION_KEY = "fm100_player_session";
 const TEAM_BACK_SEEN_KEY = "fm100_team_back_seen";
+const correctSound = new Audio("./assets/audio/correcto.mp3");
+const incorrectSound = new Audio("./assets/audio/incorrecto.mp3");
+const aJugarSound = new Audio("./assets/audio/a_jugar.mp3");
+let lastSoundEventVersion = null;
+
+function playSound(sound) {
+  if (!sound) {
+    return;
+  }
+
+  sound.currentTime = 0;
+  sound.play().catch(() => {});
+}
+
+function handleGlobalSound(state) {
+  const version = Number(state.ui?.soundEventVersion) || 0;
+  const type = state.ui?.soundEventType || null;
+
+  if (lastSoundEventVersion === null) {
+    lastSoundEventVersion = version;
+    return;
+  }
+
+  if (version <= lastSoundEventVersion || !type) {
+    return;
+  }
+
+  lastSoundEventVersion = version;
+
+  if (type === "correct") {
+    playSound(correctSound);
+    return;
+  }
+
+  if (type === "incorrect") {
+    playSound(incorrectSound);
+    return;
+  }
+
+  if (type === "a_jugar") {
+    playSound(aJugarSound);
+  }
+}
 
 function resolveTeam() {
   return team === "A" || team === "B" ? team : null;
@@ -76,6 +119,8 @@ async function loadDefaultQuestions() {
 }
 
 function render(state) {
+  handleGlobalSound(state);
+
   const validTeam = resolveTeam();
   if (!validTeam) {
     captainTitle.textContent = "Equipo no válido";

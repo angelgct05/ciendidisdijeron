@@ -47,6 +47,49 @@ const adminConfirmCancelButton = document.getElementById("admin-confirm-cancel")
 const adminConfirmAcceptButton = document.getElementById("admin-confirm-accept");
 
 let pendingConfirmAction = null;
+const correctSound = new Audio("./assets/audio/correcto.mp3");
+const incorrectSound = new Audio("./assets/audio/incorrecto.mp3");
+const aJugarSound = new Audio("./assets/audio/a_jugar.mp3");
+let lastSoundEventVersion = null;
+
+function playSound(sound) {
+  if (!sound) {
+    return;
+  }
+
+  sound.currentTime = 0;
+  sound.play().catch(() => {});
+}
+
+function handleGlobalSound(state) {
+  const version = Number(state.ui?.soundEventVersion) || 0;
+  const type = state.ui?.soundEventType || null;
+
+  if (lastSoundEventVersion === null) {
+    lastSoundEventVersion = version;
+    return;
+  }
+
+  if (version <= lastSoundEventVersion || !type) {
+    return;
+  }
+
+  lastSoundEventVersion = version;
+
+  if (type === "correct") {
+    playSound(correctSound);
+    return;
+  }
+
+  if (type === "incorrect") {
+    playSound(incorrectSound);
+    return;
+  }
+
+  if (type === "a_jugar") {
+    playSound(aJugarSound);
+  }
+}
 
 async function loadDefaultQuestions() {
   const response = await fetch("./data/questions.json", { cache: "no-store" });
@@ -196,6 +239,8 @@ function renderTeamMembers(state, team, container) {
 }
 
 function render(state) {
+  handleGlobalSound(state);
+
   const question = state.questions[state.round.questionIndex];
 
   adminTeamNameA.textContent = state.teams.A.name;
@@ -233,8 +278,13 @@ function render(state) {
   nextQuestionButton.disabled = state.round.questionIndex >= state.questions.length - 1;
 
   if (!question) {
-    adminRoundLabel.textContent = "Sin preguntas";
-    adminQuestionText.textContent = "Importa o crea preguntas";
+    if ((state.questions || []).length && state.round.questionIndex < 0) {
+      adminRoundLabel.textContent = `Pregunta 0 / ${state.questions.length}`;
+      adminQuestionText.textContent = "Presiona Siguiente Pregunta para iniciar";
+    } else {
+      adminRoundLabel.textContent = "Sin preguntas";
+      adminQuestionText.textContent = "Importa o crea preguntas";
+    }
     adminAnswersList.innerHTML = "";
     return;
   }
@@ -303,8 +353,12 @@ function attachEvents() {
   switchRoundControlButton.addEventListener("click", () => {
     dispatch("SWITCH_ROUND_CONTROL");
   });
-  addStrikeAButton.addEventListener("click", () => dispatch("ADD_STRIKE", { team: "A" }));
-  addStrikeBButton.addEventListener("click", () => dispatch("ADD_STRIKE", { team: "B" }));
+  addStrikeAButton.addEventListener("click", () => {
+    dispatch("ADD_STRIKE", { team: "A" });
+  });
+  addStrikeBButton.addEventListener("click", () => {
+    dispatch("ADD_STRIKE", { team: "B" });
+  });
   awardRevealedPointsButton.addEventListener("click", () => {
     const state = getState();
     const controlTeam = state.round.buzzerWinner;

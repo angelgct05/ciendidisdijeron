@@ -84,7 +84,7 @@ function createInitialState(defaultQuestions = []) {
     },
     questions,
     round: {
-      questionIndex: 0,
+      questionIndex: -1,
       status: "buzz-open",
       buzzerWinner: null,
       revealed: [],
@@ -100,6 +100,8 @@ function createInitialState(defaultQuestions = []) {
       logoutAllVersion: 0,
       teamBackAlertTeam: null,
       teamBackAlertVersion: 0,
+      soundEventType: null,
+      soundEventVersion: 0,
     },
     updatedAt: Date.now(),
   };
@@ -111,7 +113,7 @@ function validateState(nextState, fallbackQuestions = []) {
   }
 
   const questions = normalizeQuestions(nextState.questions?.length ? nextState.questions : fallbackQuestions);
-  const maxQuestionIndex = Math.max(0, questions.length - 1);
+  const maxQuestionIndex = Math.max(-1, questions.length - 1);
 
   const parsedStatus = ["idle", "buzz-open", "locked", "round-end"].includes(nextState.round?.status)
     ? nextState.round.status
@@ -136,7 +138,7 @@ function validateState(nextState, fallbackQuestions = []) {
     },
     questions,
     round: {
-      questionIndex: Math.min(Math.max(Number(nextState.round?.questionIndex) || 0, 0), maxQuestionIndex),
+      questionIndex: Math.min(Math.max(Number(nextState.round?.questionIndex) || -1, -1), maxQuestionIndex),
       status: parsedStatus === "round-end" ? "round-end" : effectiveRoundStatus,
       buzzerWinner: parsedBuzzerWinner,
       revealed: Array.isArray(nextState.round?.revealed)
@@ -161,6 +163,12 @@ function validateState(nextState, fallbackQuestions = []) {
         : null,
       teamBackAlertVersion: Number.isFinite(Number(nextState.ui?.teamBackAlertVersion))
         ? Number(nextState.ui.teamBackAlertVersion)
+        : 0,
+      soundEventType: ["correct", "incorrect", "a_jugar", null].includes(nextState.ui?.soundEventType)
+        ? nextState.ui.soundEventType
+        : null,
+      soundEventVersion: Number.isFinite(Number(nextState.ui?.soundEventVersion))
+        ? Number(nextState.ui.soundEventVersion)
         : 0,
     },
     updatedAt: Number(nextState.updatedAt) || Date.now(),
@@ -267,8 +275,17 @@ export function subscribeConnectionStatus(callback) {
 }
 
 function clampQuestionIndex(nextIndex) {
-  const max = Math.max(0, state.questions.length - 1);
-  return Math.min(Math.max(nextIndex, 0), max);
+  const max = Math.max(-1, state.questions.length - 1);
+  return Math.min(Math.max(nextIndex, -1), max);
+}
+
+function emitSoundEvent(type) {
+  if (!["correct", "incorrect", "a_jugar"].includes(type)) {
+    return;
+  }
+
+  state.ui.soundEventType = type;
+  state.ui.soundEventVersion = (Number(state.ui.soundEventVersion) || 0) + 1;
 }
 
 function resetRoundInternals() {
@@ -325,6 +342,7 @@ function applyActionLocal(action, payload = {}) {
         state.round.revealed = state.round.revealed.filter((value) => value !== answerIndex);
       } else {
         state.round.revealed.push(answerIndex);
+        emitSoundEvent("correct");
       }
       break;
     }
@@ -345,6 +363,7 @@ function applyActionLocal(action, payload = {}) {
       }
 
       state.teams[team].strikes = Math.max(0, (Number(state.teams[team].strikes) || 0) + 1);
+      emitSoundEvent("incorrect");
 
       const controlTeam = state.round.buzzerWinner;
       if (state.teams[team].strikes >= 2 && (controlTeam === "A" || controlTeam === "B") && controlTeam === team) {
@@ -465,7 +484,11 @@ function applyActionLocal(action, payload = {}) {
       break;
     }
     case "NEXT_QUESTION": {
+      const previousIndex = state.round.questionIndex;
       state.round.questionIndex = clampQuestionIndex(state.round.questionIndex + 1);
+      if (state.round.questionIndex !== previousIndex) {
+        emitSoundEvent("a_jugar");
+      }
       resetRoundInternals();
       break;
     }
@@ -515,7 +538,7 @@ function applyActionLocal(action, payload = {}) {
     case "RESET_GAME": {
       state.teams.A.score = 0;
       state.teams.B.score = 0;
-      state.round.questionIndex = 0;
+      state.round.questionIndex = -1;
       resetRoundInternals();
       break;
     }

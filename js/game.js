@@ -12,7 +12,6 @@ const playerIdentityEl = document.getElementById("player-identity");
 const questionTextEl = document.getElementById("question-text");
 const answersListEl = document.getElementById("answers-list");
 const roundLabelEl = document.getElementById("round-label");
-const buzzerStatusEl = document.getElementById("buzzer-status");
 const roundMultiplierIndicatorEl = document.getElementById("round-multiplier-indicator");
 const qrModalEl = document.getElementById("qr-modal");
 const teamBackModalEl = document.getElementById("team-back-modal");
@@ -25,9 +24,52 @@ const playerGateErrorEl = document.getElementById("player-gate-error");
 const PLAYER_SESSION_KEY = "fm100_player_session";
 const TEAM_BACK_SEEN_KEY = "fm100_team_back_seen";
 const ADMIN_AUTH_KEY = "fm100_admin_auth";
+const correctSound = new Audio("./assets/audio/correcto.mp3");
+const incorrectSound = new Audio("./assets/audio/incorrecto.mp3");
+const aJugarSound = new Audio("./assets/audio/a_jugar.mp3");
 
 let playerRegistered = false;
 let redirectingToCaptain = false;
+let lastSoundEventVersion = null;
+
+function playSound(sound) {
+  if (!sound) {
+    return;
+  }
+
+  sound.currentTime = 0;
+  sound.play().catch(() => {});
+}
+
+function handleGlobalSound(state) {
+  const version = Number(state.ui?.soundEventVersion) || 0;
+  const type = state.ui?.soundEventType || null;
+
+  if (lastSoundEventVersion === null) {
+    lastSoundEventVersion = version;
+    return;
+  }
+
+  if (version <= lastSoundEventVersion || !type) {
+    return;
+  }
+
+  lastSoundEventVersion = version;
+
+  if (type === "correct") {
+    playSound(correctSound);
+    return;
+  }
+
+  if (type === "incorrect") {
+    playSound(incorrectSound);
+    return;
+  }
+
+  if (type === "a_jugar") {
+    playSound(aJugarSound);
+  }
+}
 
 function loadPlayerSession() {
   const raw = sessionStorage.getItem(PLAYER_SESSION_KEY);
@@ -111,28 +153,9 @@ function renderAnswers(state) {
   });
 }
 
-function renderBuzzerState(state) {
-  const isOpen = state.round.status === "buzz-open";
-  const isLocked = state.round.status === "locked" && state.round.buzzerWinner;
-
-  buzzerStatusEl.classList.remove("ok", "warn");
-
-  if (isOpen) {
-    buzzerStatusEl.textContent = "";
-    buzzerStatusEl.classList.add("ok");
-    return;
-  }
-
-  if (isLocked) {
-    buzzerStatusEl.textContent = "";
-    buzzerStatusEl.classList.add("warn");
-    return;
-  }
-
-  buzzerStatusEl.textContent = "";
-}
-
 function render(state) {
+  handleGlobalSound(state);
+
   const question = state.questions[state.round.questionIndex];
 
   teamNameAEl.textContent = state.teams.A.name;
@@ -177,8 +200,13 @@ function render(state) {
   maybeRedirectCaptain(state);
 
   if (!question) {
-    roundLabelEl.textContent = "Sin preguntas";
-    questionTextEl.textContent = "Agrega preguntas desde el panel de admin";
+    if ((state.questions || []).length && state.round.questionIndex < 0) {
+      roundLabelEl.textContent = `Pregunta 0 / ${state.questions.length}`;
+      questionTextEl.textContent = "Esperando inicio de ronda";
+    } else {
+      roundLabelEl.textContent = "Sin preguntas";
+      questionTextEl.textContent = "Agrega preguntas desde el panel de admin";
+    }
     answersListEl.innerHTML = "";
     return;
   }
@@ -187,7 +215,6 @@ function render(state) {
   questionTextEl.textContent = question.question;
 
   renderAnswers(state);
-  renderBuzzerState(state);
 }
 
 function renderTeamBackModal(state) {
