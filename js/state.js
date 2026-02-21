@@ -13,6 +13,7 @@ let questionsRealtimeChannel = null;
 let roomSyncInterval = null;
 let supabaseEnabled = false;
 let pendingRoomSync = false;
+let pendingQuestionsSync = false;
 const listeners = new Set();
 const connectionListeners = new Set();
 let connectionStatus = "connecting";
@@ -496,6 +497,14 @@ function startRoomStatePolling() {
 
   roomSyncInterval = setInterval(async () => {
     try {
+      if (pendingQuestionsSync && state?.questions) {
+        const pushedQuestions = await replaceQuestionsInSupabase(state.questions);
+        if (pushedQuestions) {
+          pendingQuestionsSync = false;
+          setConnectionStatus("connected");
+        }
+      }
+
       if (pendingRoomSync && state) {
         const pushed = await upsertRoomState(state);
         if (pushed) {
@@ -622,6 +631,7 @@ async function setupSupabase(defaultQuestions = []) {
   } else {
     const seeded = await replaceQuestionsInSupabase(state.questions);
     if (!seeded) {
+      pendingQuestionsSync = true;
       setConnectionStatus("disconnected");
     }
   }
@@ -750,11 +760,13 @@ async function dispatchAsync(action, payload = {}) {
   if (QUESTION_ACTIONS.has(action) && supabaseEnabled) {
     const questionsSynced = await replaceQuestionsInSupabase(state.questions);
     if (!questionsSynced) {
+      pendingQuestionsSync = true;
       setConnectionStatus("disconnected");
-      state = previousState;
       persistAndNotify(true);
-        throw new Error("No se pudo guardar preguntas/respuestas en Base de Datos.");
+      throw new Error("No se pudo guardar preguntas/respuestas en Base de Datos. Se reintentará automáticamente.");
     }
+
+    pendingQuestionsSync = false;
   }
 
   if (supabaseEnabled) {
