@@ -10,6 +10,7 @@ let channel = null;
 let supabase = null;
 let realtimeChannel = null;
 let questionsRealtimeChannel = null;
+let roomSyncInterval = null;
 let supabaseEnabled = false;
 const listeners = new Set();
 const connectionListeners = new Set();
@@ -487,6 +488,30 @@ async function loadRoomState() {
   return data.state;
 }
 
+function startRoomStatePolling() {
+  if (roomSyncInterval || !supabaseEnabled || !supabase) {
+    return;
+  }
+
+  roomSyncInterval = setInterval(async () => {
+    try {
+      const remoteState = await loadRoomState();
+      if (!remoteState) {
+        return;
+      }
+
+      const nextState = validateState(remoteState, state?.questions || []);
+      if (!state || nextState.updatedAt > state.updatedAt) {
+        state = nextState;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        notifyOnly();
+      }
+    } catch {
+      setConnectionStatus("disconnected");
+    }
+  }, 1500);
+}
+
 async function loadQuestionsFromSupabase() {
   if (!supabaseEnabled || !supabase) {
     return null;
@@ -646,6 +671,8 @@ async function setupSupabase(defaultQuestions = []) {
         }
       });
   }
+
+  startRoomStatePolling();
 }
 
 async function initializeStateAsync(defaultQuestions = []) {
