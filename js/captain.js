@@ -4,7 +4,6 @@ const params = new URLSearchParams(window.location.search);
 const team = (params.get("team") || "").toUpperCase();
 
 const captainTitle = document.getElementById("captain-title");
-const captainStatus = document.getElementById("captain-status");
 const captainRoundControl = document.getElementById("captain-round-control");
 const captainStrikes = document.getElementById("captain-strikes");
 const captainBuzzButton = document.getElementById("captain-buzz");
@@ -80,7 +79,6 @@ function render(state) {
   const validTeam = resolveTeam();
   if (!validTeam) {
     captainTitle.textContent = "Equipo no válido";
-    captainStatus.textContent = "Usa la URL con ?team=A o ?team=B";
     captainBuzzButton.disabled = true;
     return;
   }
@@ -117,22 +115,6 @@ function render(state) {
   const isOpen = state.round.status === "buzz-open";
 
   captainBuzzButton.disabled = !isOpen || Boolean(winner);
-  captainStatus.classList.remove("ok", "warn");
-
-  if (isOpen && !winner) {
-    captainStatus.textContent = "Buzzer abierto: ¡presiona ahora!";
-    captainStatus.classList.add("ok");
-    return;
-  }
-
-  if (winner) {
-    const winnerName = state.teams[winner]?.name || `Equipo ${winner}`;
-    captainStatus.textContent = winner === validTeam ? "Tu equipo tiene el control de la ronda" : `${winnerName} tiene el control de la ronda`;
-    captainStatus.classList.add("warn");
-    return;
-  }
-
-  captainStatus.textContent = "Esperando al administrador";
 }
 
 function onBuzz() {

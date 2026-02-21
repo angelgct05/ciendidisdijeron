@@ -163,7 +163,7 @@ function renderTeamMembers(state, team, container) {
     const item = document.createElement("li");
     item.className = "team-member-item";
     item.innerHTML = `
-      <span>${player.name}${isCaptain ? " (Capitán)" : ""}</span>
+      <span>${player.name}</span>
       <div class="team-member-actions">
         ${isCaptain ? '<span class="captain-badge">Capitán</span>' : `<button type="button" class="question-action-btn" data-player-captain="${player.id}">Elegir Capitán</button>`}
         ${isCaptain ? `<button type="button" class="question-action-btn" data-remove-captain="${team}">Quitar Capitán</button>` : ""}
