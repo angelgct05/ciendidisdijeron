@@ -32,19 +32,20 @@ function loadPlayerSession() {
     const id = String(parsed?.id || "").trim();
     const name = String(parsed?.name || "").trim();
     const team = String(parsed?.team || "").trim();
+    const logoutVersion = Number.isFinite(Number(parsed?.logoutVersion)) ? Number(parsed.logoutVersion) : 0;
 
     if (!id || !name || (team !== "A" && team !== "B")) {
       return null;
     }
 
-    return { id, name, team };
+    return { id, name, team, logoutVersion };
   } catch {
     return null;
   }
 }
 
-function savePlayerSession(id, name, team) {
-  sessionStorage.setItem(PLAYER_SESSION_KEY, JSON.stringify({ id, name, team }));
+function savePlayerSession(id, name, team, logoutVersion = 0) {
+  sessionStorage.setItem(PLAYER_SESSION_KEY, JSON.stringify({ id, name, team, logoutVersion }));
 }
 
 function clearPlayerSession() {
@@ -187,6 +188,15 @@ function enforcePlayerSession(state) {
     return;
   }
 
+  const roomLogoutVersion = Number.isFinite(Number(state.ui?.logoutAllVersion)) ? Number(state.ui.logoutAllVersion) : 0;
+  if ((session.logoutVersion || 0) < roomLogoutVersion) {
+    clearPlayerSession();
+    playerRegistered = false;
+    playerGateErrorEl.textContent = "Tu sesión fue cerrada por el administrador.";
+    playerGateEl.classList.remove("hidden");
+    return;
+  }
+
   const current = (state.players || []).find((player) => player.id === session.id);
   if (current && current.active === false) {
     clearPlayerSession();
@@ -239,7 +249,9 @@ function attachPlayerGateEvents() {
     savePlayerSession(playerId, name, team);
 
     try {
-      await dispatch("REGISTER_PLAYER", { id: playerId, name, team });
+      const nextState = await dispatch("REGISTER_PLAYER", { id: playerId, name, team });
+      const logoutVersion = Number.isFinite(Number(nextState?.ui?.logoutAllVersion)) ? Number(nextState.ui.logoutAllVersion) : 0;
+      savePlayerSession(playerId, name, team, logoutVersion);
       playerRegistered = true;
       playerGateErrorEl.textContent = "";
       playerGateEl.classList.add("hidden");

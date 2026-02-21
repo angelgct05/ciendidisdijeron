@@ -95,6 +95,7 @@ function createInitialState(defaultQuestions = []) {
     players: [],
     ui: {
       showQr: false,
+      logoutAllVersion: 0,
     },
     updatedAt: Date.now(),
   };
@@ -138,6 +139,9 @@ function validateState(nextState, fallbackQuestions = []) {
     players: normalizePlayers(nextState.players),
     ui: {
       showQr: Boolean(nextState.ui?.showQr),
+      logoutAllVersion: Number.isFinite(Number(nextState.ui?.logoutAllVersion))
+        ? Number(nextState.ui.logoutAllVersion)
+        : 0,
     },
     updatedAt: Number(nextState.updatedAt) || Date.now(),
   };
@@ -366,6 +370,7 @@ function applyActionLocal(action, payload = {}) {
       }));
       state.round.captains.A = null;
       state.round.captains.B = null;
+      state.ui.logoutAllVersion = (Number(state.ui.logoutAllVersion) || 0) + 1;
       break;
     }
     case "TOGGLE_QR": {
