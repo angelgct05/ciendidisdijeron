@@ -12,6 +12,7 @@ let realtimeChannel = null;
 let questionsRealtimeChannel = null;
 let roomSyncInterval = null;
 let supabaseEnabled = false;
+let pendingRoomSync = false;
 const listeners = new Set();
 const connectionListeners = new Set();
 let connectionStatus = "connecting";
@@ -495,6 +496,14 @@ function startRoomStatePolling() {
 
   roomSyncInterval = setInterval(async () => {
     try {
+      if (pendingRoomSync && state) {
+        const pushed = await upsertRoomState(state);
+        if (pushed) {
+          pendingRoomSync = false;
+          setConnectionStatus("connected");
+        }
+      }
+
       const remoteState = await loadRoomState();
       if (!remoteState) {
         return;
@@ -592,7 +601,10 @@ async function setupSupabase(defaultQuestions = []) {
 
   let remoteState = await loadRoomState();
   if (!remoteState) {
-    await upsertRoomState(validateState(state, defaultQuestions));
+    const seededRoom = await upsertRoomState(validateState(state, defaultQuestions));
+    if (!seededRoom) {
+      pendingRoomSync = true;
+    }
     remoteState = await loadRoomState();
   }
 
@@ -749,6 +761,7 @@ async function dispatchAsync(action, payload = {}) {
     const synced = await upsertRoomState(state);
     if (!synced) {
       setConnectionStatus("disconnected");
+      pendingRoomSync = true;
       if (QUESTION_ACTIONS.has(action)) {
         state = previousState;
         persistAndNotify(true);
@@ -758,6 +771,7 @@ async function dispatchAsync(action, payload = {}) {
       return getState();
     }
 
+    pendingRoomSync = false;
     setConnectionStatus("connected");
   }
 
