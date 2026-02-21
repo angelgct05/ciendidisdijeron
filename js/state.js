@@ -472,6 +472,17 @@ async function upsertRoomState(nextState) {
   return true;
 }
 
+async function upsertRoomStateWithRetry(nextState, attempts = 2) {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const synced = await upsertRoomState(nextState);
+    if (synced) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 async function loadRoomState() {
   if (!supabaseEnabled || !supabase) {
     return null;
@@ -490,43 +501,60 @@ async function loadRoomState() {
   return data.state;
 }
 
+async function replaceQuestionsInSupabaseWithRetry(questions, attempts = 2) {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const synced = await replaceQuestionsInSupabase(questions);
+    if (synced) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+async function runRoomSyncCycle() {
+  try {
+    if (pendingQuestionsSync && state?.questions) {
+      const pushedQuestions = await replaceQuestionsInSupabaseWithRetry(state.questions);
+      if (pushedQuestions) {
+        pendingQuestionsSync = false;
+        setConnectionStatus("connected");
+      }
+    }
+
+    if (pendingRoomSync && state) {
+      const pushed = await upsertRoomStateWithRetry(state);
+      if (pushed) {
+        pendingRoomSync = false;
+        setConnectionStatus("connected");
+      }
+    }
+
+    const remoteState = await loadRoomState();
+    if (!remoteState) {
+      return;
+    }
+
+    const nextState = validateState(remoteState, state?.questions || []);
+    if (!state || nextState.updatedAt > state.updatedAt) {
+      state = nextState;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      notifyOnly();
+    }
+  } catch {
+    setConnectionStatus("disconnected");
+  }
+}
+
 function startRoomStatePolling() {
   if (roomSyncInterval || !supabaseEnabled || !supabase) {
     return;
   }
 
+  runRoomSyncCycle();
+
   roomSyncInterval = setInterval(async () => {
-    try {
-      if (pendingQuestionsSync && state?.questions) {
-        const pushedQuestions = await replaceQuestionsInSupabase(state.questions);
-        if (pushedQuestions) {
-          pendingQuestionsSync = false;
-          setConnectionStatus("connected");
-        }
-      }
-
-      if (pendingRoomSync && state) {
-        const pushed = await upsertRoomState(state);
-        if (pushed) {
-          pendingRoomSync = false;
-          setConnectionStatus("connected");
-        }
-      }
-
-      const remoteState = await loadRoomState();
-      if (!remoteState) {
-        return;
-      }
-
-      const nextState = validateState(remoteState, state?.questions || []);
-      if (!state || nextState.updatedAt > state.updatedAt) {
-        state = nextState;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-        notifyOnly();
-      }
-    } catch {
-      setConnectionStatus("disconnected");
-    }
+    runRoomSyncCycle();
   }, 1500);
 }
 
@@ -610,7 +638,7 @@ async function setupSupabase(defaultQuestions = []) {
 
   let remoteState = await loadRoomState();
   if (!remoteState) {
-    const seededRoom = await upsertRoomState(validateState(state, defaultQuestions));
+    const seededRoom = await upsertRoomStateWithRetry(validateState(state, defaultQuestions));
     if (!seededRoom) {
       pendingRoomSync = true;
     }
@@ -629,7 +657,7 @@ async function setupSupabase(defaultQuestions = []) {
   if (questionsFromTable && questionsFromTable.length) {
     state.questions = questionsFromTable;
   } else {
-    const seeded = await replaceQuestionsInSupabase(state.questions);
+    const seeded = await replaceQuestionsInSupabaseWithRetry(state.questions);
     if (!seeded) {
       pendingQuestionsSync = true;
       setConnectionStatus("disconnected");
@@ -758,7 +786,7 @@ async function dispatchAsync(action, payload = {}) {
   applyActionLocal(action, payload);
 
   if (QUESTION_ACTIONS.has(action) && supabaseEnabled) {
-    const questionsSynced = await replaceQuestionsInSupabase(state.questions);
+    const questionsSynced = await replaceQuestionsInSupabaseWithRetry(state.questions);
     if (!questionsSynced) {
       pendingQuestionsSync = true;
       setConnectionStatus("disconnected");
@@ -770,7 +798,7 @@ async function dispatchAsync(action, payload = {}) {
   }
 
   if (supabaseEnabled) {
-    const synced = await upsertRoomState(state);
+    const synced = await upsertRoomStateWithRetry(state);
     if (!synced) {
       setConnectionStatus("disconnected");
       pendingRoomSync = true;
