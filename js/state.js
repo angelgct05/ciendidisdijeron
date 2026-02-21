@@ -297,6 +297,16 @@ function applyActionLocal(action, payload = {}) {
       }
       break;
     }
+    case "SWITCH_ROUND_CONTROL": {
+      if (state.round.buzzerWinner === "A") {
+        state.round.buzzerWinner = "B";
+        state.round.status = "locked";
+      } else if (state.round.buzzerWinner === "B") {
+        state.round.buzzerWinner = "A";
+        state.round.status = "locked";
+      }
+      break;
+    }
     case "RESET_ROUND": {
       resetRoundInternals();
       break;

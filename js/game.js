@@ -119,7 +119,7 @@ function renderBuzzerState(state) {
   }
 
   if (isLocked) {
-    buzzerStatusEl.textContent = "Buzzer bloqueado.";
+    buzzerStatusEl.textContent = "";
     buzzerStatusEl.classList.add("warn");
     return;
   }

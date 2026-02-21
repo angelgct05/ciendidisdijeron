@@ -26,6 +26,7 @@ const teamMembersA = document.getElementById("team-members-a");
 const teamMembersB = document.getElementById("team-members-b");
 const openBuzzButton = document.getElementById("open-buzz");
 const toggleQrButton = document.getElementById("toggle-qr");
+const switchRoundControlButton = document.getElementById("switch-round-control");
 const awardRevealedPointsButton = document.getElementById("award-revealed-points");
 const logoutAllPlayersButton = document.getElementById("logout-all-players");
 const roundMultiplierSelect = document.getElementById("round-multiplier-select");
@@ -216,6 +217,7 @@ function render(state) {
   } else {
     adminRoundControl.textContent = "Control de ronda: sin equipo";
   }
+  switchRoundControlButton.disabled = !(controlTeam === "A" || controlTeam === "B");
 
   const revealedPoints = getRevealedPointsTotal(state);
   const multiplier = [1, 2, 3].includes(Number(state.round.pointsMultiplier)) ? Number(state.round.pointsMultiplier) : 1;
@@ -297,6 +299,9 @@ function attachEvents() {
   toggleQrButton.addEventListener("click", () => {
     const state = getState();
     dispatch("TOGGLE_QR", { value: !state.ui?.showQr });
+  });
+  switchRoundControlButton.addEventListener("click", () => {
+    dispatch("SWITCH_ROUND_CONTROL");
   });
   addStrikeAButton.addEventListener("click", () => dispatch("ADD_STRIKE", { team: "A" }));
   addStrikeBButton.addEventListener("click", () => dispatch("ADD_STRIKE", { team: "B" }));
