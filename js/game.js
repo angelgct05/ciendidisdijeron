@@ -4,6 +4,7 @@ const scoreAEl = document.getElementById("score-a");
 const scoreBEl = document.getElementById("score-b");
 const teamNameAEl = document.getElementById("team-name-a");
 const teamNameBEl = document.getElementById("team-name-b");
+const playerIdentityEl = document.getElementById("player-identity");
 const questionTextEl = document.getElementById("question-text");
 const answersListEl = document.getElementById("answers-list");
 const roundLabelEl = document.getElementById("round-label");
@@ -114,6 +115,15 @@ function render(state) {
   const optionB = playerTeamSelectEl.querySelector('option[value="B"]');
   optionA.textContent = state.teams.A.name;
   optionB.textContent = state.teams.B.name;
+
+  const session = loadPlayerSession();
+  if (session) {
+    const teamName = session.team === "A" ? state.teams.A.name : state.teams.B.name;
+    playerIdentityEl.innerHTML = `Jugador: <span class="player-identity-value">${session.name}</span> | Equipo: <span class="player-identity-value">${teamName}</span>`;
+  } else {
+    playerIdentityEl.innerHTML = "Jugador: <span class=\"player-identity-value\">--</span> | Equipo: <span class=\"player-identity-value\">--</span>";
+  }
+
   scoreAEl.textContent = state.teams.A.score;
   scoreBEl.textContent = state.teams.B.score;
   qrModalEl.classList.toggle("hidden", !state.ui?.showQr);

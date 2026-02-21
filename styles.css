@@ -37,6 +37,18 @@ body {
   gap: 1rem;
 }
 
+.player-identity {
+  margin: 0;
+  font-weight: 600;
+  color: var(--muted);
+  text-align: right;
+}
+
+.player-identity-value {
+  color: var(--accent);
+  font-weight: 800;
+}
+
 h1, h2, h3, h4, p {
   margin: 0;
 }
