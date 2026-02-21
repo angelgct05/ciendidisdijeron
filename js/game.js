@@ -18,6 +18,7 @@ const playerGateErrorEl = document.getElementById("player-gate-error");
 const PLAYER_SESSION_KEY = "fm100_player_session";
 
 let playerRegistered = false;
+let redirectingToCaptain = false;
 
 function loadPlayerSession() {
   const raw = sessionStorage.getItem(PLAYER_SESSION_KEY);
@@ -128,6 +129,7 @@ function render(state) {
   scoreBEl.textContent = state.teams.B.score;
   qrModalEl.classList.toggle("hidden", !state.ui?.showQr);
   enforcePlayerSession(state);
+  maybeRedirectCaptain(state);
 
   if (!question) {
     roundLabelEl.textContent = "Sin preguntas";
@@ -141,6 +143,23 @@ function render(state) {
 
   renderAnswers(state);
   renderBuzzerState(state);
+}
+
+function maybeRedirectCaptain(state) {
+  if (redirectingToCaptain) {
+    return;
+  }
+
+  const session = loadPlayerSession();
+  if (!session) {
+    return;
+  }
+
+  const captainId = state.round?.captains?.[session.team] || null;
+  if (captainId && captainId === session.id) {
+    redirectingToCaptain = true;
+    window.location.replace(`./captain.html?team=${session.team}`);
+  }
 }
 
 function enforcePlayerSession(state) {

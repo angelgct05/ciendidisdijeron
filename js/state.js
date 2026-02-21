@@ -84,6 +84,10 @@ function createInitialState(defaultQuestions = []) {
       status: "idle",
       buzzerWinner: null,
       revealed: [],
+      captains: {
+        A: null,
+        B: null,
+      },
     },
     players: [],
     ui: {
@@ -123,6 +127,10 @@ function validateState(nextState, fallbackQuestions = []) {
       revealed: Array.isArray(nextState.round?.revealed)
         ? nextState.round.revealed.filter((value) => Number.isInteger(value) && value >= 0)
         : [],
+      captains: {
+        A: typeof nextState.round?.captains?.A === "string" ? nextState.round.captains.A : null,
+        B: typeof nextState.round?.captains?.B === "string" ? nextState.round.captains.B : null,
+      },
     },
     players: normalizePlayers(nextState.players),
     ui: {
@@ -225,6 +233,10 @@ function resetRoundInternals() {
   state.round.status = "idle";
   state.round.buzzerWinner = null;
   state.round.revealed = [];
+  state.round.captains = {
+    A: null,
+    B: null,
+  };
 }
 
 function applyActionLocal(action, payload = {}) {
@@ -298,6 +310,26 @@ function applyActionLocal(action, payload = {}) {
       }
       break;
     }
+    case "SET_ROUND_CAPTAIN": {
+      const team = payload.team;
+      const playerId = String(payload.playerId || "").trim();
+      if (team !== "A" && team !== "B") {
+        break;
+      }
+
+      if (!playerId) {
+        state.round.captains[team] = null;
+        break;
+      }
+
+      const player = state.players.find((item) => item.id === playerId && item.active && item.team === team);
+      if (!player) {
+        break;
+      }
+
+      state.round.captains[team] = playerId;
+      break;
+    }
     case "LOGOUT_PLAYER": {
       const id = String(payload.id || "").trim();
       if (!id) {
@@ -314,6 +346,14 @@ function applyActionLocal(action, payload = {}) {
           active: false,
         };
       });
+
+      if (state.round.captains.A === id) {
+        state.round.captains.A = null;
+      }
+
+      if (state.round.captains.B === id) {
+        state.round.captains.B = null;
+      }
       break;
     }
     case "LOGOUT_ALL_PLAYERS": {
@@ -321,6 +361,8 @@ function applyActionLocal(action, payload = {}) {
         ...player,
         active: false,
       }));
+      state.round.captains.A = null;
+      state.round.captains.B = null;
       break;
     }
     case "TOGGLE_QR": {

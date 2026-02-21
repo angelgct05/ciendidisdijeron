@@ -6,9 +6,39 @@ const team = (params.get("team") || "").toUpperCase();
 const captainTitle = document.getElementById("captain-title");
 const captainStatus = document.getElementById("captain-status");
 const captainBuzzButton = document.getElementById("captain-buzz");
+const PLAYER_SESSION_KEY = "fm100_player_session";
 
 function resolveTeam() {
   return team === "A" || team === "B" ? team : null;
+}
+
+function loadPlayerSession() {
+  const raw = sessionStorage.getItem(PLAYER_SESSION_KEY);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    const id = String(parsed?.id || "").trim();
+    const playerTeam = String(parsed?.team || "").trim();
+    const name = String(parsed?.name || "").trim();
+    if (!id || !name || (playerTeam !== "A" && playerTeam !== "B")) {
+      return null;
+    }
+
+    return {
+      id,
+      team: playerTeam,
+      name,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function denyCaptainAccess() {
+  window.location.replace("./index.html");
 }
 
 async function loadDefaultQuestions() {
@@ -26,6 +56,19 @@ function render(state) {
     captainTitle.textContent = "Equipo no válido";
     captainStatus.textContent = "Usa la URL con ?team=A o ?team=B";
     captainBuzzButton.disabled = true;
+    return;
+  }
+
+  const session = loadPlayerSession();
+  if (!session || session.team !== validTeam) {
+    denyCaptainAccess();
+    return;
+  }
+
+  const player = (state.players || []).find((item) => item.id === session.id);
+  const assignedCaptain = state.round?.captains?.[validTeam] || null;
+  if (!player || !player.active || assignedCaptain !== session.id) {
+    denyCaptainAccess();
     return;
   }
 

@@ -122,6 +122,7 @@ function syncInputValue(input, value) {
 
 function renderTeamMembers(state, team, container) {
   const players = (state.players || []).filter((player) => player.active && player.team === team);
+  const currentCaptainId = state.round?.captains?.[team] || null;
   container.innerHTML = "";
 
   if (!players.length) {
@@ -133,12 +134,31 @@ function renderTeamMembers(state, team, container) {
   }
 
   players.forEach((player) => {
+    const isCaptain = player.id === currentCaptainId;
     const item = document.createElement("li");
     item.className = "team-member-item";
     item.innerHTML = `
-      <span>${player.name}</span>
-      <button type="button" class="question-action-btn" data-player-logout="${player.id}">Cerrar sesión</button>
+      <span>${player.name}${isCaptain ? " (Capitán)" : ""}</span>
+      <div class="team-member-actions">
+        ${isCaptain ? '<span class="captain-badge">Capitán</span>' : `<button type="button" class="question-action-btn" data-player-captain="${player.id}">Elegir Capitán</button>`}
+        ${isCaptain ? `<button type="button" class="question-action-btn" data-remove-captain="${team}">Quitar Capitán</button>` : ""}
+        <button type="button" class="question-action-btn" data-player-logout="${player.id}">Cerrar sesión</button>
+      </div>
     `;
+
+    const captainButton = item.querySelector("[data-player-captain]");
+    if (captainButton) {
+      captainButton.addEventListener("click", () => {
+        dispatch("SET_ROUND_CAPTAIN", { team, playerId: player.id });
+      });
+    }
+
+    const removeCaptainButton = item.querySelector("[data-remove-captain]");
+    if (removeCaptainButton) {
+      removeCaptainButton.addEventListener("click", () => {
+        dispatch("SET_ROUND_CAPTAIN", { team, playerId: null });
+      });
+    }
 
     const logoutButton = item.querySelector("[data-player-logout]");
     logoutButton.addEventListener("click", () => {

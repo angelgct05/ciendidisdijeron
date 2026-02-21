@@ -365,6 +365,25 @@ button,
   gap: 0.45rem;
 }
 
+.team-member-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.captain-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #166534;
+  background: rgba(34, 197, 94, 0.2);
+  border: 1px solid rgba(34, 197, 94, 0.45);
+}
+
 .team-member-empty {
   color: var(--muted);
   justify-content: center;
