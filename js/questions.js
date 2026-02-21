@@ -23,6 +23,10 @@ const questionModalSave = document.getElementById("question-modal-save");
 const successModal = document.getElementById("success-modal");
 const successModalMessage = document.getElementById("success-modal-message");
 const successModalClose = document.getElementById("success-modal-close");
+const correctSound = new Audio("./assets/audio/correcto.mp3");
+const incorrectSound = new Audio("./assets/audio/incorrecto.mp3");
+const aJugarSound = new Audio("./assets/audio/a_jugar.mp3");
+const triunfoSound = new Audio("./assets/audio/triunfo.mp3");
 
 let currentState = null;
 let sortBy = "index";
@@ -31,6 +35,105 @@ let expandedQuestionIndex = null;
 let modalMode = "create";
 let modalQuestionIndex = null;
 let modalQuestionBase = null;
+let lastSoundEventVersion = null;
+let pendingSoundEvent = null;
+let audioUnlockConfigured = false;
+
+function playSound(sound) {
+  if (!sound) {
+    return Promise.resolve(false);
+  }
+
+  sound.currentTime = 0;
+  return sound.play().then(() => true).catch(() => false);
+}
+
+function getSoundByType(type) {
+  if (type === "correct") {
+    return correctSound;
+  }
+
+  if (type === "incorrect") {
+    return incorrectSound;
+  }
+
+  if (type === "a_jugar") {
+    return aJugarSound;
+  }
+
+  if (type === "triunfo") {
+    return triunfoSound;
+  }
+
+  return null;
+}
+
+async function tryPlaySoundEvent(type, version) {
+  const sound = getSoundByType(type);
+  if (!sound) {
+    return;
+  }
+
+  const played = await playSound(sound);
+  if (played) {
+    lastSoundEventVersion = version;
+    pendingSoundEvent = null;
+  } else {
+    pendingSoundEvent = { type, version };
+  }
+}
+
+async function unlockAudioAndReplay() {
+  const sounds = [correctSound, incorrectSound, aJugarSound, triunfoSound];
+  await Promise.allSettled(
+    sounds.map(async (sound) => {
+      sound.muted = true;
+      sound.currentTime = 0;
+      const ok = await playSound(sound);
+      if (ok) {
+        sound.pause();
+        sound.currentTime = 0;
+      }
+      sound.muted = false;
+    })
+  );
+
+  if (pendingSoundEvent) {
+    const { type, version } = pendingSoundEvent;
+    tryPlaySoundEvent(type, version);
+  }
+}
+
+function setupAudioUnlock() {
+  if (audioUnlockConfigured) {
+    return;
+  }
+
+  audioUnlockConfigured = true;
+  const unlock = () => {
+    unlockAudioAndReplay();
+  };
+
+  window.addEventListener("pointerdown", unlock, { once: true });
+  window.addEventListener("touchstart", unlock, { once: true });
+  window.addEventListener("keydown", unlock, { once: true });
+}
+
+function handleGlobalSound(state) {
+  const version = Number(state.ui?.soundEventVersion) || 0;
+  const type = state.ui?.soundEventType || null;
+
+  if (lastSoundEventVersion === null) {
+    lastSoundEventVersion = version;
+    return;
+  }
+
+  if (version <= lastSoundEventVersion || !type) {
+    return;
+  }
+
+  tryPlaySoundEvent(type, version);
+}
 
 async function loadDefaultQuestions() {
   const response = await fetch("./data/questions.json", { cache: "no-store" });
@@ -345,6 +448,7 @@ function renderQuestionList(state) {
 }
 
 function render(state) {
+  handleGlobalSound(state);
   currentState = state;
 
   if (!state.questions.length) {
@@ -439,6 +543,7 @@ function attachEvents() {
 }
 
 async function main() {
+  setupAudioUnlock();
   if (!ensureAuth()) {
     return;
   }

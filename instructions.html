@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cien Didis Dijeron - Instrucciones</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="layout">
+      <header class="topbar">
+        <h1>Cómo jugar 100 Mexicanos Dijeron</h1>
+        <div class="inline-controls">
+          <a class="link-btn" href="./admin.html" target="_blank" rel="noopener">Volver a Admin</a>
+          <a class="link-btn" href="./index.html" target="_blank" rel="noopener">Ver Pantalla de Juego</a>
+        </div>
+      </header>
+
+      <section class="editor-card">
+        <h3>Objetivo del juego</h3>
+        <p>Dos equipos compiten para adivinar las respuestas más populares que dio una encuesta. Cada respuesta tiene un puntaje y gana el equipo con mayor puntuación total.</p>
+      </section>
+
+      <section class="editor-card">
+        <h3>Flujo básico de una ronda</h3>
+        <p><strong>1) Inicio:</strong> El administrador pulsa <strong>Siguiente Pregunta</strong>. En ese momento comienza la ronda y suena el audio de inicio.</p>
+        <p><strong>2) Buzzer:</strong> El capitán asignado de cada equipo intenta ganar el control de la ronda con el buzzer.</p>
+        <p><strong>3) Respuestas:</strong> El administrador revela respuestas con <strong>Mostrar</strong> cuando un equipo acierta.</p>
+        <p><strong>4) Strikes:</strong> Si falla un intento, el administrador pulsa <strong>Agregar Strike</strong> al equipo correspondiente.</p>
+        <p><strong>5) Cierre:</strong> Cuando termina la ronda, el administrador elige:</p>
+        <p>- <strong>Termina Ronda:</strong> suma los puntos mostrados al equipo con control.</p>
+        <p>- <strong>Robo de Puntos:</strong> suma esos puntos al equipo contrario.</p>
+      </section>
+
+      <section class="editor-card">
+        <h3>Controles importantes del administrador</h3>
+        <p><strong>Multiplicador de ronda:</strong> x1, x2 o x3, aplicado a los puntos de cierre.</p>
+        <p><strong>Quitar Control de Ronda:</strong> deja la ronda sin equipo con control.</p>
+        <p><strong>Pregunta 0/n:</strong> estado previo al arranque, donde la pregunta aún no se muestra hasta pulsar <strong>Siguiente Pregunta</strong>.</p>
+      </section>
+
+      <section class="editor-card">
+        <h3>Sistema de sonido</h3>
+        <p>Los sonidos se sincronizan para todos los clientes abiertos del juego:</p>
+        <p>- <strong>correcto.mp3</strong> al mostrar una respuesta.</p>
+        <p>- <strong>incorrecto.mp3</strong> al agregar un strike.</p>
+        <p>- <strong>a_jugar.mp3</strong> al iniciar la siguiente pregunta.</p>
+        <p>- <strong>triunfo.mp3</strong> al cerrar ronda con <strong>Termina Ronda</strong> o <strong>Robo de Puntos</strong>.</p>
+      </section>
+    </main>
+  </body>
+</html>
