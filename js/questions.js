@@ -13,14 +13,21 @@ const logoutAdminButton = document.getElementById("logout-admin");
 const summaryEl = document.getElementById("questions-summary");
 const questionItems = document.getElementById("question-items");
 const newQuestionButton = document.getElementById("new-question");
-const exportJsonButton = document.getElementById("export-json");
-const importJsonInput = document.getElementById("import-json");
 const sortButtons = Array.from(document.querySelectorAll("[data-sort]"));
+const questionModal = document.getElementById("question-modal");
+const questionModalTitle = document.getElementById("question-modal-title");
+const questionModalInput = document.getElementById("question-modal-input");
+const questionModalError = document.getElementById("question-modal-error");
+const questionModalCancel = document.getElementById("question-modal-cancel");
+const questionModalSave = document.getElementById("question-modal-save");
 
 let currentState = null;
 let sortBy = "index";
 let sortDirection = "asc";
 let expandedQuestionIndex = null;
+let modalMode = "create";
+let modalQuestionIndex = null;
+let modalQuestionBase = null;
 
 async function loadDefaultQuestions() {
   const response = await fetch("./data/questions.json", { cache: "no-store" });
@@ -49,6 +56,55 @@ function ensureAuth() {
 
   window.location.href = "./admin.html";
   return false;
+}
+
+function openQuestionModal({ mode, index = null, questionText = "", questionBase = null }) {
+  modalMode = mode;
+  modalQuestionIndex = index;
+  modalQuestionBase = questionBase;
+  questionModalTitle.textContent = mode === "edit" ? "Editar pregunta" : "Nueva pregunta";
+  questionModalInput.value = questionText;
+  questionModalError.textContent = "";
+  questionModal.classList.remove("hidden");
+  questionModalInput.focus();
+}
+
+function closeQuestionModal() {
+  questionModal.classList.add("hidden");
+  questionModalInput.value = "";
+  questionModalError.textContent = "";
+  modalQuestionIndex = null;
+  modalQuestionBase = null;
+}
+
+async function saveQuestionFromModal() {
+  const questionText = questionModalInput.value.trim();
+  if (!questionText) {
+    questionModalError.textContent = "Escribe el texto de la pregunta.";
+    return;
+  }
+
+  const fallbackAnswers = [{ text: "Respuesta", points: 0 }];
+  const baseAnswers = modalQuestionBase?.answers?.length ? modalQuestionBase.answers : fallbackAnswers;
+
+  try {
+    await dispatch("UPSERT_QUESTION", {
+      index: modalMode === "edit" ? modalQuestionIndex : undefined,
+      question: {
+        id: modalQuestionBase?.id || `q${Date.now()}`,
+        question: questionText,
+        answers: baseAnswers,
+      },
+    });
+
+    if (modalMode === "create") {
+      expandedQuestionIndex = currentState?.questions?.length ?? null;
+    }
+
+    closeQuestionModal();
+  } catch (error) {
+    questionModalError.textContent = error?.message || "No se pudo guardar en Supabase.";
+  }
 }
 
 function getSortedItems(state) {
@@ -109,24 +165,13 @@ function renderQuestionList(state) {
     editButton.type = "button";
     editButton.className = "question-action-btn";
     editButton.textContent = "Editar";
-    editButton.addEventListener("click", async () => {
-      const nextQuestionText = window.prompt("Editar pregunta", item.question);
-      if (!nextQuestionText || !nextQuestionText.trim()) {
-        return;
-      }
-
-      try {
-        await dispatch("UPSERT_QUESTION", {
-          index,
-          question: {
-            id: item.id || `q${Date.now()}`,
-            question: nextQuestionText.trim(),
-            answers: item.answers?.length ? item.answers : [{ text: "Respuesta", points: 0 }],
-          },
-        });
-      } catch (error) {
-        summaryEl.textContent = error?.message || "No se pudo guardar en Supabase.";
-      }
+    editButton.addEventListener("click", () => {
+      openQuestionModal({
+        mode: "edit",
+        index,
+        questionText: item.question,
+        questionBase: item,
+      });
     });
 
     const deleteButton = document.createElement("button");
@@ -334,24 +379,15 @@ function attachEvents() {
   });
 
   newQuestionButton.addEventListener("click", async () => {
-    const questionText = window.prompt("Nueva pregunta");
-    if (!questionText || !questionText.trim()) {
-      return;
-    }
+    openQuestionModal({ mode: "create" });
+  });
 
-    try {
-      await dispatch("UPSERT_QUESTION", {
-        question: {
-          id: `q${Date.now()}`,
-          question: questionText.trim(),
-          answers: [{ text: "Respuesta", points: 0 }],
-        },
-      });
-
-      const nextIndex = currentState?.questions?.length ?? 0;
-      expandedQuestionIndex = nextIndex;
-    } catch (error) {
-      summaryEl.textContent = error?.message || "No se pudo guardar en Supabase.";
+  questionModalCancel.addEventListener("click", closeQuestionModal);
+  questionModalSave.addEventListener("click", saveQuestionFromModal);
+  questionModalInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      saveQuestionFromModal();
     }
   });
 
@@ -375,33 +411,6 @@ function attachEvents() {
     });
   });
 
-  exportJsonButton.addEventListener("click", () => {
-    const questions = currentState?.questions || getState()?.questions || [];
-    const blob = new Blob([JSON.stringify(questions, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "questions.json";
-    anchor.click();
-    URL.revokeObjectURL(url);
-  });
-
-  importJsonInput.addEventListener("change", async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-
-    const text = await file.text();
-    const parsed = JSON.parse(text);
-    try {
-      await dispatch("SET_QUESTIONS", { questions: parsed });
-      selectedQuestionIndex = 0;
-      importJsonInput.value = "";
-    } catch (error) {
-      summaryEl.textContent = error?.message || "No se pudo importar en Supabase.";
-    }
-  });
 }
 
 async function main() {

@@ -10,8 +10,14 @@ const pinError = document.getElementById("pin-error");
 const adminApp = document.getElementById("admin-app");
 const logoutAdminButton = document.getElementById("logout-admin");
 
+const adminTeamNameA = document.getElementById("admin-team-name-a");
+const adminTeamNameB = document.getElementById("admin-team-name-b");
+const teamNameInputA = document.getElementById("team-name-a-input");
+const teamNameInputB = document.getElementById("team-name-b-input");
 const adminScoreA = document.getElementById("admin-score-a");
 const adminScoreB = document.getElementById("admin-score-b");
+const scoreDeltaInputA = document.getElementById("score-delta-a");
+const scoreDeltaInputB = document.getElementById("score-delta-b");
 const openBuzzButton = document.getElementById("open-buzz");
 const resetRoundButton = document.getElementById("reset-round");
 const nextQuestionButton = document.getElementById("next-question");
@@ -40,13 +46,19 @@ function renderAdminAnswers(state) {
     const item = document.createElement("li");
     const visible = state.round.revealed.includes(index);
 
-    item.className = `answer-item ${visible ? "revealed" : "hidden-answer"}`;
+    item.className = `answer-item admin-answer-item ${visible ? "revealed" : ""}`;
     item.innerHTML = `
-      <span>${visible ? answer.text : "████████████"}</span>
-      <strong>${visible ? answer.points : "--"}</strong>
+      <div class="admin-answer-main">
+        <span>${answer.text}</span>
+      </div>
+      <div class="admin-answer-actions">
+        <strong>${answer.points}</strong>
+        <button type="button" class="question-action-btn" data-answer-toggle="${index}">${visible ? "Ocultar" : "Mostrar"}</button>
+      </div>
     `;
 
-    item.addEventListener("click", () => {
+    const toggleButton = item.querySelector("[data-answer-toggle]");
+    toggleButton.addEventListener("click", () => {
       dispatch("TOGGLE_REVEAL", { answerIndex: index });
     });
 
@@ -64,7 +76,8 @@ function renderBuzzerInfo(state) {
   }
 
   if (state.round.status === "locked" && state.round.buzzerWinner) {
-    adminBuzzerStatus.textContent = `Ganó el buzzer: Equipo ${state.round.buzzerWinner}`;
+    const winnerName = state.teams[state.round.buzzerWinner]?.name || `Equipo ${state.round.buzzerWinner}`;
+    adminBuzzerStatus.textContent = `Ganó el buzzer: ${winnerName}`;
     adminBuzzerStatus.classList.add("warn");
     return;
   }
@@ -91,11 +104,24 @@ function renderSupabaseStatus(status) {
   adminSupabaseStatus.classList.add("status-disconnected");
 }
 
+function syncInputValue(input, value) {
+  if (document.activeElement !== input) {
+    input.value = value;
+  }
+}
+
 function render(state) {
   const question = state.questions[state.round.questionIndex];
 
+  adminTeamNameA.textContent = state.teams.A.name;
+  adminTeamNameB.textContent = state.teams.B.name;
+  syncInputValue(teamNameInputA, state.teams.A.name);
+  syncInputValue(teamNameInputB, state.teams.B.name);
+
   adminScoreA.textContent = state.teams.A.score;
   adminScoreB.textContent = state.teams.B.score;
+  prevQuestionButton.disabled = state.round.questionIndex <= 0;
+  nextQuestionButton.disabled = state.round.questionIndex >= state.questions.length - 1;
 
   if (!question) {
     adminRoundLabel.textContent = "Sin preguntas";
@@ -150,7 +176,15 @@ function attachEvents() {
     enableAdmin();
   });
 
-  openBuzzButton.addEventListener("click", () => dispatch("OPEN_BUZZ"));
+  const openCaptainScreens = () => {
+    window.open("./captain.html?team=A", "_blank", "noopener");
+    window.open("./captain.html?team=B", "_blank", "noopener");
+  };
+
+  openBuzzButton.addEventListener("click", () => {
+    dispatch("OPEN_BUZZ");
+    openCaptainScreens();
+  });
   resetRoundButton.addEventListener("click", () => dispatch("RESET_ROUND"));
   nextQuestionButton.addEventListener("click", () => dispatch("NEXT_QUESTION"));
   prevQuestionButton.addEventListener("click", () => dispatch("PREV_QUESTION"));
@@ -164,13 +198,42 @@ function attachEvents() {
     pinInput.focus();
   });
 
-  document.querySelectorAll("[data-score]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const [team, points] = button.dataset.score.split(":");
-      dispatch("ADD_SCORE", { team, points: Number(points) });
+  const updateTeamName = (team, input) => {
+    dispatch("SET_TEAM_NAME", { team, name: input.value });
+  };
+
+  teamNameInputA.addEventListener("change", () => updateTeamName("A", teamNameInputA));
+  teamNameInputB.addEventListener("change", () => updateTeamName("B", teamNameInputB));
+  teamNameInputA.addEventListener("blur", () => updateTeamName("A", teamNameInputA));
+  teamNameInputB.addEventListener("blur", () => updateTeamName("B", teamNameInputB));
+
+  [
+    [teamNameInputA, "A"],
+    [teamNameInputB, "B"],
+  ].forEach(([input, team]) => {
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        updateTeamName(team, input);
+        input.blur();
+      }
     });
   });
 
+  document.querySelectorAll("[data-score-action]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const [team, operation] = button.dataset.scoreAction.split(":");
+      const sourceInput = team === "A" ? scoreDeltaInputA : scoreDeltaInputB;
+      const baseValue = Number(sourceInput.value);
+      const normalized = Number.isFinite(baseValue) && baseValue > 0 ? Math.floor(baseValue) : 0;
+      const points = operation === "sub" ? -normalized : normalized;
+      if (!points) {
+        return;
+      }
+
+      dispatch("ADD_SCORE", { team, points: Number(points) });
+    });
+  });
 }
 
 async function main() {

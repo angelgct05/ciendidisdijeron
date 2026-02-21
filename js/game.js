@@ -2,6 +2,8 @@ import { initializeState, subscribe } from "./state.js";
 
 const scoreAEl = document.getElementById("score-a");
 const scoreBEl = document.getElementById("score-b");
+const teamNameAEl = document.getElementById("team-name-a");
+const teamNameBEl = document.getElementById("team-name-b");
 const questionTextEl = document.getElementById("question-text");
 const answersListEl = document.getElementById("answers-list");
 const roundLabelEl = document.getElementById("round-label");
@@ -47,7 +49,8 @@ function renderBuzzerState(state) {
   }
 
   if (isLocked) {
-    buzzerStatusEl.textContent = `Ganó el buzzer: Equipo ${state.round.buzzerWinner}`;
+    const winnerName = state.teams[state.round.buzzerWinner]?.name || `Equipo ${state.round.buzzerWinner}`;
+    buzzerStatusEl.textContent = `Ganó el buzzer: ${winnerName}`;
     buzzerStatusEl.classList.add("warn");
     return;
   }
@@ -58,6 +61,8 @@ function renderBuzzerState(state) {
 function render(state) {
   const question = state.questions[state.round.questionIndex];
 
+  teamNameAEl.textContent = state.teams.A.name;
+  teamNameBEl.textContent = state.teams.B.name;
   scoreAEl.textContent = state.teams.A.score;
   scoreBEl.textContent = state.teams.B.score;
 

@@ -40,6 +40,11 @@ function normalizeQuestions(questions) {
     .filter((item) => item.answers.length > 0);
 }
 
+function normalizeTeamName(value, fallback) {
+  const text = String(value || "").trim();
+  return text.length ? text.slice(0, 24) : fallback;
+}
+
 function createInitialState(defaultQuestions = []) {
   const questions = normalizeQuestions(defaultQuestions);
 
@@ -72,11 +77,11 @@ function validateState(nextState, fallbackQuestions = []) {
     version: 1,
     teams: {
       A: {
-        name: "Equipo A",
+        name: normalizeTeamName(nextState.teams?.A?.name, "Equipo A"),
         score: Number(nextState.teams?.A?.score) || 0,
       },
       B: {
-        name: "Equipo B",
+        name: normalizeTeamName(nextState.teams?.B?.name, "Equipo B"),
         score: Number(nextState.teams?.B?.score) || 0,
       },
     },
@@ -231,6 +236,16 @@ function applyActionLocal(action, payload = {}) {
       }
 
       state.teams[team].score = Math.max(0, state.teams[team].score + points);
+      break;
+    }
+    case "SET_TEAM_NAME": {
+      const team = payload.team;
+      if (team !== "A" && team !== "B") {
+        break;
+      }
+
+      const fallback = team === "A" ? "Equipo A" : "Equipo B";
+      state.teams[team].name = normalizeTeamName(payload.name, fallback);
       break;
     }
     case "SET_QUESTION_INDEX": {

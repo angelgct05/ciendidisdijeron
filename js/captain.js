@@ -29,7 +29,8 @@ function render(state) {
     return;
   }
 
-  captainTitle.textContent = `Capitán Equipo ${validTeam}`;
+  const ownTeamName = state.teams[validTeam]?.name || `Equipo ${validTeam}`;
+  captainTitle.textContent = `Capitán ${ownTeamName}`;
   const winner = state.round.buzzerWinner;
   const isOpen = state.round.status === "buzz-open";
 
@@ -43,7 +44,8 @@ function render(state) {
   }
 
   if (winner) {
-    captainStatus.textContent = winner === validTeam ? "Tu equipo ganó el buzzer" : `Ganó Equipo ${winner}`;
+    const winnerName = state.teams[winner]?.name || `Equipo ${winner}`;
+    captainStatus.textContent = winner === validTeam ? "Tu equipo ganó el buzzer" : `Ganó ${winnerName}`;
     captainStatus.classList.add("warn");
     return;
   }

@@ -31,7 +31,10 @@
         <p id="questions-summary" class="hint"></p>
         <div class="editor-layout questions-full">
           <aside>
-            <h4>Listado</h4>
+            <div class="questions-list-header">
+              <h4>Listado</h4>
+              <button id="new-question" type="button" class="question-action-btn">Nueva Pregunta</button>
+            </div>
             <div class="questions-table-wrap">
               <table class="questions-table">
                 <thead>
@@ -44,18 +47,21 @@
                 <tbody id="question-items"></tbody>
               </table>
             </div>
-            <div class="editor-actions">
-              <button id="new-question" type="button">Nueva</button>
-            </div>
-            <div class="editor-actions">
-              <button id="export-json" type="button">Exportar JSON</button>
-              <label class="file-label">Importar JSON
-                <input id="import-json" type="file" accept="application/json" />
-              </label>
-            </div>
           </aside>
         </div>
       </section>
+
+      <div id="question-modal" class="mini-modal hidden" role="dialog" aria-modal="true" aria-labelledby="question-modal-title">
+        <div class="mini-modal-card">
+          <h3 id="question-modal-title">Pregunta</h3>
+          <input id="question-modal-input" placeholder="Escribe la pregunta" />
+          <p id="question-modal-error" class="error-text"></p>
+          <div class="mini-modal-actions">
+            <button id="question-modal-cancel" type="button" class="danger">Cancelar</button>
+            <button id="question-modal-save" type="button">Guardar</button>
+          </div>
+        </div>
+      </div>
     </main>
 
     <script type="module" src="./js/questions.js"></script>
