@@ -424,6 +424,11 @@ button:disabled {
   color: var(--accent);
 }
 
+.round-control-indicator {
+  color: var(--accent);
+  font-weight: 700;
+}
+
 .status-badge {
   display: inline-flex;
   align-items: center;

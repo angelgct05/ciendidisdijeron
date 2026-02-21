@@ -9,6 +9,7 @@ const questionTextEl = document.getElementById("question-text");
 const answersListEl = document.getElementById("answers-list");
 const roundLabelEl = document.getElementById("round-label");
 const buzzerStatusEl = document.getElementById("buzzer-status");
+const roundControlIndicatorEl = document.getElementById("round-control-indicator");
 const qrModalEl = document.getElementById("qr-modal");
 const playerGateEl = document.getElementById("player-gate");
 const playerGateFormEl = document.getElementById("player-gate-form");
@@ -135,6 +136,15 @@ function render(state) {
 
   scoreAEl.textContent = state.teams.A.score;
   scoreBEl.textContent = state.teams.B.score;
+
+  const controlTeam = state.round.buzzerWinner;
+  if (controlTeam === "A" || controlTeam === "B") {
+    const controlName = state.teams[controlTeam]?.name || `Equipo ${controlTeam}`;
+    roundControlIndicatorEl.textContent = `Control de ronda: ${controlName}`;
+  } else {
+    roundControlIndicatorEl.textContent = "Control de ronda: sin equipo";
+  }
+
   qrModalEl.classList.toggle("hidden", !state.ui?.showQr);
   enforcePlayerSession(state);
   maybeRedirectCaptain(state);

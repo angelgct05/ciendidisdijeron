@@ -22,6 +22,7 @@ const teamMembersA = document.getElementById("team-members-a");
 const teamMembersB = document.getElementById("team-members-b");
 const openBuzzButton = document.getElementById("open-buzz");
 const toggleQrButton = document.getElementById("toggle-qr");
+const awardRevealedPointsButton = document.getElementById("award-revealed-points");
 const logoutAllPlayersButton = document.getElementById("logout-all-players");
 const resetRoundButton = document.getElementById("reset-round");
 const nextQuestionButton = document.getElementById("next-question");
@@ -29,6 +30,7 @@ const prevQuestionButton = document.getElementById("prev-question");
 const resetGameButton = document.getElementById("reset-game");
 const adminSupabaseStatus = document.getElementById("admin-supabase-status");
 const adminBuzzerStatus = document.getElementById("admin-buzzer-status");
+const adminRoundControl = document.getElementById("admin-round-control");
 const adminRoundLabel = document.getElementById("admin-round-label");
 const adminQuestionText = document.getElementById("admin-question-text");
 const adminAnswersList = document.getElementById("admin-answers-list");
@@ -93,6 +95,24 @@ function renderBuzzerInfo(state) {
   }
 
   adminBuzzerStatus.textContent = "Buzzer cerrado.";
+}
+
+function getRevealedPointsTotal(state) {
+  const question = state.questions[state.round.questionIndex];
+  if (!question) {
+    return 0;
+  }
+
+  const revealedIndexes = Array.from(new Set(state.round.revealed || []));
+  return revealedIndexes.reduce((total, index) => {
+    const answer = question.answers[index];
+    if (!answer) {
+      return total;
+    }
+
+    const points = Number(answer.points);
+    return total + (Number.isFinite(points) && points > 0 ? points : 0);
+  }, 0);
 }
 
 function renderSupabaseStatus(status) {
@@ -182,6 +202,16 @@ function render(state) {
   renderTeamMembers(state, "A", teamMembersA);
   renderTeamMembers(state, "B", teamMembersB);
   toggleQrButton.textContent = state.ui?.showQr ? "Ocultar QR" : "Mostrar QR";
+  const controlTeam = state.round.buzzerWinner;
+  if (controlTeam === "A" || controlTeam === "B") {
+    const controlName = state.teams[controlTeam]?.name || `Equipo ${controlTeam}`;
+    adminRoundControl.textContent = `Control de ronda: ${controlName}`;
+  } else {
+    adminRoundControl.textContent = "Control de ronda: sin equipo";
+  }
+
+  const revealedPoints = getRevealedPointsTotal(state);
+  awardRevealedPointsButton.disabled = !(controlTeam === "A" || controlTeam === "B") || revealedPoints <= 0;
   prevQuestionButton.disabled = state.round.questionIndex <= 0;
   nextQuestionButton.disabled = state.round.questionIndex >= state.questions.length - 1;
 
@@ -255,6 +285,20 @@ function attachEvents() {
   toggleQrButton.addEventListener("click", () => {
     const state = getState();
     dispatch("TOGGLE_QR", { value: !state.ui?.showQr });
+  });
+  awardRevealedPointsButton.addEventListener("click", () => {
+    const state = getState();
+    const controlTeam = state.round.buzzerWinner;
+    if (controlTeam !== "A" && controlTeam !== "B") {
+      return;
+    }
+
+    const points = getRevealedPointsTotal(state);
+    if (points <= 0) {
+      return;
+    }
+
+    dispatch("ADD_SCORE", { team: controlTeam, points });
   });
   logoutAllPlayersButton.addEventListener("click", () => {
     openConfirmModal("¿Seguro que deseas cerrar la sesión de todos los jugadores?", () => dispatch("LOGOUT_ALL_PLAYERS"));
