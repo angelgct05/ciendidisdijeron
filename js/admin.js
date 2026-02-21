@@ -27,7 +27,7 @@ const scoreDeltaInputB = document.getElementById("score-delta-b");
 const teamMembersA = document.getElementById("team-members-a");
 const teamMembersB = document.getElementById("team-members-b");
 const toggleQrButton = document.getElementById("toggle-qr");
-const switchRoundControlButton = document.getElementById("switch-round-control");
+const clearRoundControlButton = document.getElementById("clear-round-control");
 const awardRevealedPointsButton = document.getElementById("award-revealed-points");
 const stealRevealedPointsButton = document.getElementById("steal-revealed-points");
 const logoutAllPlayersButton = document.getElementById("logout-all-players");
@@ -50,15 +50,89 @@ let pendingConfirmAction = null;
 const correctSound = new Audio("./assets/audio/correcto.mp3");
 const incorrectSound = new Audio("./assets/audio/incorrecto.mp3");
 const aJugarSound = new Audio("./assets/audio/a_jugar.mp3");
+const triunfoSound = new Audio("./assets/audio/triunfo.mp3");
 let lastSoundEventVersion = null;
+let pendingSoundEvent = null;
+let audioUnlockConfigured = false;
 
 function playSound(sound) {
+  if (!sound) {
+    return Promise.resolve(false);
+  }
+
+  sound.currentTime = 0;
+  return sound.play().then(() => true).catch(() => false);
+}
+
+function getSoundByType(type) {
+  if (type === "correct") {
+    return correctSound;
+  }
+
+  if (type === "incorrect") {
+    return incorrectSound;
+  }
+
+  if (type === "a_jugar") {
+    return aJugarSound;
+  }
+
+  if (type === "triunfo") {
+    return triunfoSound;
+  }
+
+  return null;
+}
+
+async function tryPlaySoundEvent(type, version) {
+  const sound = getSoundByType(type);
   if (!sound) {
     return;
   }
 
-  sound.currentTime = 0;
-  sound.play().catch(() => {});
+  const played = await playSound(sound);
+  if (played) {
+    lastSoundEventVersion = version;
+    pendingSoundEvent = null;
+  } else {
+    pendingSoundEvent = { type, version };
+  }
+}
+
+async function unlockAudioAndReplay() {
+  const sounds = [correctSound, incorrectSound, aJugarSound, triunfoSound];
+  await Promise.allSettled(
+    sounds.map(async (sound) => {
+      sound.muted = true;
+      sound.currentTime = 0;
+      const ok = await playSound(sound);
+      if (ok) {
+        sound.pause();
+        sound.currentTime = 0;
+      }
+      sound.muted = false;
+    })
+  );
+
+  if (pendingSoundEvent) {
+    const { type, version } = pendingSoundEvent;
+    tryPlaySoundEvent(type, version);
+  }
+}
+
+function setupAudioUnlock() {
+  if (audioUnlockConfigured) {
+    return;
+  }
+
+  audioUnlockConfigured = true;
+  const unlock = () => {
+    unlockAudioAndReplay();
+  };
+
+  window.addEventListener("pointerdown", unlock, { once: true });
+  window.addEventListener("touchstart", unlock, { once: true });
+  window.addEventListener("keydown", unlock, { once: true });
 }
 
 function handleGlobalSound(state) {
@@ -74,21 +148,7 @@ function handleGlobalSound(state) {
     return;
   }
 
-  lastSoundEventVersion = version;
-
-  if (type === "correct") {
-    playSound(correctSound);
-    return;
-  }
-
-  if (type === "incorrect") {
-    playSound(incorrectSound);
-    return;
-  }
-
-  if (type === "a_jugar") {
-    playSound(aJugarSound);
-  }
+  tryPlaySoundEvent(type, version);
 }
 
 async function loadDefaultQuestions() {
@@ -265,7 +325,7 @@ function render(state) {
     adminTeamControlBadgeA.classList.remove("active");
     adminTeamControlBadgeB.classList.remove("active");
   }
-  switchRoundControlButton.disabled = !(controlTeam === "A" || controlTeam === "B");
+  clearRoundControlButton.disabled = !(controlTeam === "A" || controlTeam === "B");
 
   const revealedPoints = getRevealedPointsTotal(state);
   const multiplier = [1, 2, 3].includes(Number(state.round.pointsMultiplier)) ? Number(state.round.pointsMultiplier) : 1;
@@ -350,8 +410,8 @@ function attachEvents() {
     const state = getState();
     dispatch("TOGGLE_QR", { value: !state.ui?.showQr });
   });
-  switchRoundControlButton.addEventListener("click", () => {
-    dispatch("SWITCH_ROUND_CONTROL");
+  clearRoundControlButton.addEventListener("click", () => {
+    dispatch("CLEAR_ROUND_CONTROL");
   });
   addStrikeAButton.addEventListener("click", () => {
     dispatch("ADD_STRIKE", { team: "A" });
@@ -373,7 +433,7 @@ function attachEvents() {
 
     const multiplier = [1, 2, 3].includes(Number(state.round.pointsMultiplier)) ? Number(state.round.pointsMultiplier) : 1;
 
-    dispatch("ADD_SCORE", { team: controlTeam, points: points * multiplier });
+    dispatch("ADD_SCORE", { team: controlTeam, points: points * multiplier, playTriumph: true });
   });
   stealRevealedPointsButton.addEventListener("click", () => {
     const state = getState();
@@ -390,7 +450,7 @@ function attachEvents() {
 
     const multiplier = [1, 2, 3].includes(Number(state.round.pointsMultiplier)) ? Number(state.round.pointsMultiplier) : 1;
 
-    dispatch("ADD_SCORE", { team: targetTeam, points: points * multiplier });
+    dispatch("ADD_SCORE", { team: targetTeam, points: points * multiplier, playTriumph: true });
   });
   roundMultiplierSelect.addEventListener("change", () => {
     const value = Number(roundMultiplierSelect.value);
@@ -480,6 +540,7 @@ function attachEvents() {
 }
 
 async function main() {
+  setupAudioUnlock();
   attachEvents();
   ensureAuth();
 

@@ -114,6 +114,11 @@ function validateState(nextState, fallbackQuestions = []) {
 
   const questions = normalizeQuestions(nextState.questions?.length ? nextState.questions : fallbackQuestions);
   const maxQuestionIndex = Math.max(-1, questions.length - 1);
+  const incomingQuestionIndex = Number(nextState.round?.questionIndex);
+  const normalizedQuestionIndex = Number.isInteger(incomingQuestionIndex) ? incomingQuestionIndex : -1;
+  const safeQuestionIndex = questions.length
+    ? Math.min(Math.max(normalizedQuestionIndex, -1), maxQuestionIndex)
+    : Math.max(normalizedQuestionIndex, -1);
 
   const parsedStatus = ["idle", "buzz-open", "locked", "round-end"].includes(nextState.round?.status)
     ? nextState.round.status
@@ -138,7 +143,7 @@ function validateState(nextState, fallbackQuestions = []) {
     },
     questions,
     round: {
-      questionIndex: Math.min(Math.max(Number(nextState.round?.questionIndex) || -1, -1), maxQuestionIndex),
+      questionIndex: safeQuestionIndex,
       status: parsedStatus === "round-end" ? "round-end" : effectiveRoundStatus,
       buzzerWinner: parsedBuzzerWinner,
       revealed: Array.isArray(nextState.round?.revealed)
@@ -164,7 +169,7 @@ function validateState(nextState, fallbackQuestions = []) {
       teamBackAlertVersion: Number.isFinite(Number(nextState.ui?.teamBackAlertVersion))
         ? Number(nextState.ui.teamBackAlertVersion)
         : 0,
-      soundEventType: ["correct", "incorrect", "a_jugar", null].includes(nextState.ui?.soundEventType)
+      soundEventType: ["correct", "incorrect", "a_jugar", "triunfo", null].includes(nextState.ui?.soundEventType)
         ? nextState.ui.soundEventType
         : null,
       soundEventVersion: Number.isFinite(Number(nextState.ui?.soundEventVersion))
@@ -280,7 +285,7 @@ function clampQuestionIndex(nextIndex) {
 }
 
 function emitSoundEvent(type) {
-  if (!["correct", "incorrect", "a_jugar"].includes(type)) {
+  if (!["correct", "incorrect", "a_jugar", "triunfo"].includes(type)) {
     return;
   }
 
@@ -328,6 +333,11 @@ function applyActionLocal(action, payload = {}) {
       }
       break;
     }
+    case "CLEAR_ROUND_CONTROL": {
+      state.round.buzzerWinner = null;
+      state.round.status = "buzz-open";
+      break;
+    }
     case "RESET_ROUND": {
       resetRoundInternals();
       break;
@@ -354,6 +364,9 @@ function applyActionLocal(action, payload = {}) {
       }
 
       state.teams[team].score = Math.max(0, state.teams[team].score + points);
+      if (payload.playTriumph === true) {
+        emitSoundEvent("triunfo");
+      }
       break;
     }
     case "ADD_STRIKE": {
