@@ -96,6 +96,16 @@ h1, h2, h3, h4, p {
   color: var(--accent);
 }
 
+.strikes-readonly {
+  margin-top: 0.2rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.strikes-readonly strong {
+  color: var(--accent);
+}
+
 .badge {
   font-size: 0.85rem;
   color: var(--muted);

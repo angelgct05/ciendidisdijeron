@@ -2,6 +2,8 @@ import { dispatch, initializeState, subscribe } from "./state.js";
 
 const scoreAEl = document.getElementById("score-a");
 const scoreBEl = document.getElementById("score-b");
+const strikesAEl = document.getElementById("strikes-a");
+const strikesBEl = document.getElementById("strikes-b");
 const teamNameAEl = document.getElementById("team-name-a");
 const teamNameBEl = document.getElementById("team-name-b");
 const playerIdentityEl = document.getElementById("player-identity");
@@ -146,6 +148,8 @@ function render(state) {
 
   scoreAEl.textContent = state.teams.A.score;
   scoreBEl.textContent = state.teams.B.score;
+  strikesAEl.textContent = String(state.teams.A.strikes || 0);
+  strikesBEl.textContent = String(state.teams.B.strikes || 0);
 
   const controlTeam = state.round.buzzerWinner;
   if (controlTeam === "A" || controlTeam === "B") {
