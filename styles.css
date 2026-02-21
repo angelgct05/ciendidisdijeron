@@ -559,6 +559,14 @@ button:disabled {
   font-size: 1rem;
 }
 
+.qr-modal-image {
+  width: min(86vw, 560px);
+  max-height: 86vh;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3);
+}
+
 @media (max-width: 900px) {
   .layout {
     width: min(1120px, 96vw);

@@ -8,6 +8,7 @@ const questionTextEl = document.getElementById("question-text");
 const answersListEl = document.getElementById("answers-list");
 const roundLabelEl = document.getElementById("round-label");
 const buzzerStatusEl = document.getElementById("buzzer-status");
+const qrModalEl = document.getElementById("qr-modal");
 
 async function loadDefaultQuestions() {
   const response = await fetch("./data/questions.json", { cache: "no-store" });
@@ -65,6 +66,7 @@ function render(state) {
   teamNameBEl.textContent = state.teams.B.name;
   scoreAEl.textContent = state.teams.A.score;
   scoreBEl.textContent = state.teams.B.score;
+  qrModalEl.classList.toggle("hidden", !state.ui?.showQr);
 
   if (!question) {
     roundLabelEl.textContent = "Sin preguntas";

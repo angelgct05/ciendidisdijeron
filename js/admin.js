@@ -1,4 +1,4 @@
-import { dispatch, initializeState, subscribe, subscribeConnectionStatus } from "./state.js";
+import { dispatch, getState, initializeState, subscribe, subscribeConnectionStatus } from "./state.js";
 
 const ADMIN_PIN = "2026";
 const ADMIN_AUTH_KEY = "fm100_admin_auth";
@@ -19,6 +19,7 @@ const adminScoreB = document.getElementById("admin-score-b");
 const scoreDeltaInputA = document.getElementById("score-delta-a");
 const scoreDeltaInputB = document.getElementById("score-delta-b");
 const openBuzzButton = document.getElementById("open-buzz");
+const toggleQrButton = document.getElementById("toggle-qr");
 const resetRoundButton = document.getElementById("reset-round");
 const nextQuestionButton = document.getElementById("next-question");
 const prevQuestionButton = document.getElementById("prev-question");
@@ -28,6 +29,12 @@ const adminBuzzerStatus = document.getElementById("admin-buzzer-status");
 const adminRoundLabel = document.getElementById("admin-round-label");
 const adminQuestionText = document.getElementById("admin-question-text");
 const adminAnswersList = document.getElementById("admin-answers-list");
+const adminConfirmModal = document.getElementById("admin-confirm-modal");
+const adminConfirmMessage = document.getElementById("admin-confirm-message");
+const adminConfirmCancelButton = document.getElementById("admin-confirm-cancel");
+const adminConfirmAcceptButton = document.getElementById("admin-confirm-accept");
+
+let pendingConfirmAction = null;
 
 async function loadDefaultQuestions() {
   const response = await fetch("./data/questions.json", { cache: "no-store" });
@@ -120,6 +127,7 @@ function render(state) {
 
   adminScoreA.textContent = state.teams.A.score;
   adminScoreB.textContent = state.teams.B.score;
+  toggleQrButton.textContent = state.ui?.showQr ? "Ocultar QR" : "Mostrar QR";
   prevQuestionButton.disabled = state.round.questionIndex <= 0;
   nextQuestionButton.disabled = state.round.questionIndex >= state.questions.length - 1;
 
@@ -154,6 +162,17 @@ function ensureAuth() {
   }
 }
 
+function closeConfirmModal() {
+  adminConfirmModal.classList.add("hidden");
+  pendingConfirmAction = null;
+}
+
+function openConfirmModal(message, onConfirm) {
+  adminConfirmMessage.textContent = message;
+  pendingConfirmAction = onConfirm;
+  adminConfirmModal.classList.remove("hidden");
+}
+
 function attachEvents() {
   pinForm.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -176,19 +195,42 @@ function attachEvents() {
     enableAdmin();
   });
 
-  const openCaptainScreens = () => {
-    window.open("./captain.html?team=A", "_blank", "noopener");
-    window.open("./captain.html?team=B", "_blank", "noopener");
-  };
-
   openBuzzButton.addEventListener("click", () => {
     dispatch("OPEN_BUZZ");
-    openCaptainScreens();
   });
-  resetRoundButton.addEventListener("click", () => dispatch("RESET_ROUND"));
+  toggleQrButton.addEventListener("click", () => {
+    const state = getState();
+    dispatch("TOGGLE_QR", { value: !state.ui?.showQr });
+  });
+  resetRoundButton.addEventListener("click", () => {
+    openConfirmModal("¿Seguro que deseas resetear la ronda actual?", () => dispatch("RESET_ROUND"));
+  });
   nextQuestionButton.addEventListener("click", () => dispatch("NEXT_QUESTION"));
   prevQuestionButton.addEventListener("click", () => dispatch("PREV_QUESTION"));
-  resetGameButton.addEventListener("click", () => dispatch("RESET_GAME"));
+  resetGameButton.addEventListener("click", () => {
+    openConfirmModal("¿Seguro que deseas resetear toda la partida?", () => dispatch("RESET_GAME"));
+  });
+
+  adminConfirmCancelButton.addEventListener("click", closeConfirmModal);
+  adminConfirmAcceptButton.addEventListener("click", () => {
+    const action = pendingConfirmAction;
+    closeConfirmModal();
+    if (action) {
+      action();
+    }
+  });
+
+  adminConfirmModal.addEventListener("click", (event) => {
+    if (event.target === adminConfirmModal) {
+      closeConfirmModal();
+    }
+  });
+
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !adminConfirmModal.classList.contains("hidden")) {
+      closeConfirmModal();
+    }
+  });
 
   logoutAdminButton.addEventListener("click", () => {
     localStorage.removeItem(ADMIN_AUTH_KEY);

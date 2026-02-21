@@ -61,6 +61,9 @@ function createInitialState(defaultQuestions = []) {
       buzzerWinner: null,
       revealed: [],
     },
+    ui: {
+      showQr: false,
+    },
     updatedAt: Date.now(),
   };
 }
@@ -95,6 +98,9 @@ function validateState(nextState, fallbackQuestions = []) {
       revealed: Array.isArray(nextState.round?.revealed)
         ? nextState.round.revealed.filter((value) => Number.isInteger(value) && value >= 0)
         : [],
+    },
+    ui: {
+      showQr: Boolean(nextState.ui?.showQr),
     },
     updatedAt: Number(nextState.updatedAt) || Date.now(),
   };
@@ -246,6 +252,14 @@ function applyActionLocal(action, payload = {}) {
 
       const fallback = team === "A" ? "Equipo A" : "Equipo B";
       state.teams[team].name = normalizeTeamName(payload.name, fallback);
+      break;
+    }
+    case "TOGGLE_QR": {
+      if (typeof payload.value === "boolean") {
+        state.ui.showQr = payload.value;
+      } else {
+        state.ui.showQr = !state.ui.showQr;
+      }
       break;
     }
     case "SET_QUESTION_INDEX": {

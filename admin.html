@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>100 Mexicanos Dijeron - Admin</title>
+    <title>Cien Didis Dijeron - Admin</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -34,9 +34,9 @@
           <input id="team-name-a-input" class="team-name-input" type="text" maxlength="24" placeholder="Nombre Equipo A" />
           <p id="admin-score-a" class="score">0</p>
           <div class="score-adjust-controls">
+            <button data-score-action="A:sub">Restar</button>
             <input id="score-delta-a" type="number" min="1" step="1" value="10" inputmode="numeric" aria-label="Puntos para Equipo A" />
             <button data-score-action="A:add">Sumar</button>
-            <button data-score-action="A:sub">Restar</button>
           </div>
         </article>
         <article class="team team-b">
@@ -44,9 +44,9 @@
           <input id="team-name-b-input" class="team-name-input" type="text" maxlength="24" placeholder="Nombre Equipo B" />
           <p id="admin-score-b" class="score">0</p>
           <div class="score-adjust-controls">
+            <button data-score-action="B:sub">Restar</button>
             <input id="score-delta-b" type="number" min="1" step="1" value="10" inputmode="numeric" aria-label="Puntos para Equipo B" />
             <button data-score-action="B:add">Sumar</button>
-            <button data-score-action="B:sub">Restar</button>
           </div>
         </article>
       </section>
@@ -55,6 +55,7 @@
         <h3>Control de Ronda</h3>
         <div class="control-grid">
           <button id="open-buzz">Abrir Buzzer</button>
+          <button id="toggle-qr">Mostrar QR</button>
           <button id="reset-round">Reset Ronda</button>
           <button id="reset-game" class="danger">Reset Partida</button>
         </div>
@@ -69,10 +70,20 @@
         <p class="badge" id="admin-round-label">Pregunta 1</p>
         <h3 id="admin-question-text">Cargando pregunta...</h3>
         <ul id="admin-answers-list" class="answers-list"></ul>
-        <p class="hint">Tip: haz clic en una respuesta para revelarla/ocultarla.</p>
       </section>
 
     </main>
+
+    <div id="admin-confirm-modal" class="mini-modal hidden" role="dialog" aria-modal="true" aria-labelledby="admin-confirm-title">
+      <div class="mini-modal-card">
+        <h3 id="admin-confirm-title">Confirmar acción</h3>
+        <p id="admin-confirm-message">¿Estás seguro?</p>
+        <div class="mini-modal-actions">
+          <button id="admin-confirm-cancel" type="button" class="danger">Cancelar</button>
+          <button id="admin-confirm-accept" type="button">Confirmar</button>
+        </div>
+      </div>
+    </div>
 
     <script type="module" src="./js/admin.js"></script>
   </body>

@@ -1,4 +1,4 @@
-# 100 Mexicanos Dijeron (MVP Estático)
+# Cien Didis Dijeron (MVP Estático)
 
 Juego web estático con:
 - Pantalla de juego: `index.html`
