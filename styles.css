@@ -280,6 +280,53 @@ h1, h2, h3, h4, p {
   border-color: rgba(243, 128, 49, 0.65);
 }
 
+.game-answers-list .answer-item {
+  background: var(--bg);
+  border-color: var(--accent);
+  color: var(--accent);
+  min-height: 52px;
+  font-size: clamp(1.05rem, 2.8vw, 2rem);
+  font-weight: 800;
+  padding: 0.55rem 0.8rem;
+}
+
+.game-answers-list .answer-item.revealed {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.game-answers-list .answer-text {
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.game-answers-list .answer-leader {
+  flex: 1;
+  min-width: 0;
+  border-bottom: 0.22em dotted currentColor;
+  transform: translateY(0.08em);
+}
+
+.game-answers-list .answer-points {
+  min-width: 1.6ch;
+  text-align: right;
+  line-height: 1;
+  font-size: 1.22em;
+}
+
+.game-answers-list .answer-item.hidden-answer {
+  color: var(--accent);
+  justify-content: center;
+}
+
+.game-answers-list .answer-dots {
+  display: block;
+  width: 100%;
+  border-bottom: 0.24em dotted currentColor;
+  transform: translateY(0.08em);
+}
+
 .admin-answer-item {
   color: var(--text);
 }

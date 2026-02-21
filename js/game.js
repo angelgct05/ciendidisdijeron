@@ -97,10 +97,15 @@ function renderAnswers(state) {
     const visible = state.round.revealed.includes(index);
 
     item.className = `answer-item ${visible ? "revealed" : "hidden-answer"}`;
-    item.innerHTML = `
-      <span>${visible ? answer.text : "████████████"}</span>
-      <strong>${visible ? answer.points : "--"}</strong>
-    `;
+    if (visible) {
+      item.innerHTML = `
+        <span class="answer-text">${answer.text}</span>
+        <span class="answer-leader" aria-hidden="true"></span>
+        <strong class="answer-points">${answer.points}</strong>
+      `;
+    } else {
+      item.innerHTML = '<span class="answer-dots" aria-label="Respuesta oculta"></span>';
+    }
 
     answersListEl.appendChild(item);
   });
