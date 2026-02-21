@@ -750,8 +750,8 @@ button:disabled {
   }
 
   .captain-card .buzz-btn {
-    min-height: 110px;
-    font-size: 1.35rem;
+    min-height: 150px;
+    font-size: 1.75rem;
     width: 100%;
   }
 }
