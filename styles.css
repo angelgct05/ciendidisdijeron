@@ -664,6 +664,61 @@ button:disabled {
   gap: 0.8rem;
 }
 
+.captain-card .buzz-btn {
+  position: relative;
+  margin: 0.25rem auto 0;
+  width: min(260px, 78vw);
+  aspect-ratio: 1 / 1;
+  min-height: 0;
+  border-radius: 50%;
+  border: 4px solid rgba(90, 90, 90, 0.55);
+  padding: 0;
+  display: grid;
+  place-items: center;
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--panel);
+  background:
+    radial-gradient(circle at 34% 28%, rgba(246, 244, 244, 0.55) 0 22%, transparent 24%),
+    radial-gradient(circle at 50% 40%, var(--accent) 0 62%, rgba(90, 90, 90, 0.9) 100%);
+  box-shadow:
+    inset 0 -10px 0 rgba(90, 90, 90, 0.35),
+    inset 0 10px 14px rgba(246, 244, 244, 0.2),
+    0 10px 0 rgba(90, 90, 90, 0.55),
+    0 16px 20px rgba(90, 90, 90, 0.28);
+  transform: translateY(0);
+  transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+}
+
+.captain-card .buzz-btn::after {
+  content: "";
+  position: absolute;
+  inset: auto 16% -14%;
+  height: 20%;
+  border-radius: 999px;
+  background: rgba(90, 90, 90, 0.5);
+  filter: blur(1px);
+  z-index: -1;
+}
+
+.captain-card .buzz-btn:active {
+  transform: translateY(6px);
+  box-shadow:
+    inset 0 -6px 0 rgba(90, 90, 90, 0.35),
+    inset 0 6px 10px rgba(246, 244, 244, 0.16),
+    0 4px 0 rgba(90, 90, 90, 0.55),
+    0 8px 12px rgba(90, 90, 90, 0.22);
+}
+
+.captain-card .buzz-btn:disabled {
+  background:
+    radial-gradient(circle at 34% 28%, rgba(246, 244, 244, 0.3) 0 20%, transparent 23%),
+    radial-gradient(circle at 50% 40%, rgba(90, 90, 90, 0.55) 0 62%, rgba(90, 90, 90, 0.85) 100%);
+  color: rgba(246, 244, 244, 0.78);
+  border-color: rgba(90, 90, 90, 0.5);
+}
+
 .captain-card .round-control-indicator,
 .captain-card .strikes-readonly {
   margin: 0;
@@ -821,8 +876,7 @@ button:disabled {
   }
 
   .captain-card .buzz-btn {
-    min-height: 150px;
-    font-size: 1.75rem;
-    width: 100%;
+    width: min(320px, 86vw);
+    font-size: 2rem;
   }
 }
