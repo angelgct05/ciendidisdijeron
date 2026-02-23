@@ -11,15 +11,27 @@ const questionsApp = document.getElementById("questions-app");
 const logoutAdminButton = document.getElementById("logout-admin");
 
 const summaryEl = document.getElementById("questions-summary");
+const typesSummaryEl = document.getElementById("types-summary");
+const typeItems = document.getElementById("type-items");
+const newTypeButton = document.getElementById("new-type");
 const questionItems = document.getElementById("question-items");
 const newQuestionButton = document.getElementById("new-question");
 const sortButtons = Array.from(document.querySelectorAll("[data-sort]"));
 const questionModal = document.getElementById("question-modal");
 const questionModalTitle = document.getElementById("question-modal-title");
 const questionModalInput = document.getElementById("question-modal-input");
+const questionModalTypeSelect = document.getElementById("question-modal-type-select");
+const questionModalOrderInput = document.getElementById("question-modal-order-input");
 const questionModalError = document.getElementById("question-modal-error");
 const questionModalCancel = document.getElementById("question-modal-cancel");
 const questionModalSave = document.getElementById("question-modal-save");
+const typeModal = document.getElementById("type-modal");
+const typeModalTitle = document.getElementById("type-modal-title");
+const typeModalNameInput = document.getElementById("type-modal-name-input");
+const typeModalDescriptionInput = document.getElementById("type-modal-description-input");
+const typeModalError = document.getElementById("type-modal-error");
+const typeModalCancel = document.getElementById("type-modal-cancel");
+const typeModalSave = document.getElementById("type-modal-save");
 const successModal = document.getElementById("success-modal");
 const successModalMessage = document.getElementById("success-modal-message");
 const successModalClose = document.getElementById("success-modal-close");
@@ -35,6 +47,8 @@ let expandedQuestionIndex = null;
 let modalMode = "create";
 let modalQuestionIndex = null;
 let modalQuestionBase = null;
+let typeModalMode = "create";
+let typeModalId = null;
 let lastSoundEventVersion = null;
 let pendingSoundEvent = null;
 let audioUnlockConfigured = false;
@@ -170,6 +184,16 @@ function openQuestionModal({ mode, index = null, questionText = "", questionBase
   modalQuestionBase = questionBase;
   questionModalTitle.textContent = mode === "edit" ? "Editar pregunta" : "Nueva pregunta";
   questionModalInput.value = questionText;
+  questionModalTypeSelect.innerHTML = "";
+  (currentState?.questionTypes || []).forEach((type) => {
+    const option = document.createElement("option");
+    option.value = type.id;
+    option.textContent = type.name;
+    questionModalTypeSelect.appendChild(option);
+  });
+  const selectedTypeId = questionBase?.typeId || currentState?.ui?.activeQuestionTypeId || currentState?.questionTypes?.[0]?.id || "";
+  questionModalTypeSelect.value = selectedTypeId;
+  questionModalOrderInput.value = String(Number(questionBase?.displayOrder) || (currentState?.questions?.length || 0) + 1);
   questionModalError.textContent = "";
   questionModal.classList.remove("hidden");
   questionModalInput.focus();
@@ -178,9 +202,51 @@ function openQuestionModal({ mode, index = null, questionText = "", questionBase
 function closeQuestionModal() {
   questionModal.classList.add("hidden");
   questionModalInput.value = "";
+  questionModalTypeSelect.innerHTML = "";
+  questionModalOrderInput.value = "";
   questionModalError.textContent = "";
   modalQuestionIndex = null;
   modalQuestionBase = null;
+}
+
+function openTypeModal({ mode, type = null }) {
+  typeModalMode = mode;
+  typeModalId = type?.id || null;
+  typeModalTitle.textContent = mode === "edit" ? "Editar tipo" : "Nuevo tipo";
+  typeModalNameInput.value = type?.name || "";
+  typeModalDescriptionInput.value = type?.description || "";
+  typeModalError.textContent = "";
+  typeModal.classList.remove("hidden");
+  typeModalNameInput.focus();
+}
+
+function closeTypeModal() {
+  typeModal.classList.add("hidden");
+  typeModalNameInput.value = "";
+  typeModalDescriptionInput.value = "";
+  typeModalError.textContent = "";
+  typeModalMode = "create";
+  typeModalId = null;
+}
+
+async function saveTypeFromModal() {
+  const name = typeModalNameInput.value.trim();
+  const description = typeModalDescriptionInput.value.trim();
+  if (!name) {
+    typeModalError.textContent = "Ingresa el nombre del tipo.";
+    return;
+  }
+
+  try {
+    await dispatch("UPSERT_QUESTION_TYPE", {
+      id: typeModalMode === "edit" ? typeModalId : undefined,
+      name,
+      description,
+    });
+    closeTypeModal();
+  } catch (error) {
+    typeModalError.textContent = error?.message || "No se pudo guardar el tipo.";
+  }
 }
 
 function openSuccessModal(message) {
@@ -194,8 +260,20 @@ function closeSuccessModal() {
 
 async function saveQuestionFromModal() {
   const questionText = questionModalInput.value.trim();
+  const typeId = questionModalTypeSelect.value;
+  const displayOrder = Number(questionModalOrderInput.value);
   if (!questionText) {
     questionModalError.textContent = "Escribe el texto de la pregunta.";
+    return;
+  }
+
+  if (!typeId) {
+    questionModalError.textContent = "Selecciona el tipo de pregunta.";
+    return;
+  }
+
+  if (!Number.isInteger(displayOrder) || displayOrder <= 0) {
+    questionModalError.textContent = "Ingresa un orden válido (1 o mayor).";
     return;
   }
 
@@ -208,6 +286,8 @@ async function saveQuestionFromModal() {
       question: {
         id: modalQuestionBase?.id || `q${Date.now()}`,
         question: questionText,
+        typeId,
+        displayOrder,
         answers: baseAnswers,
       },
     });
@@ -238,6 +318,57 @@ function getSortedItems(state) {
   });
 
   return mapped;
+}
+
+function getTypeName(state, typeId) {
+  return state.questionTypes.find((type) => type.id === typeId)?.name || "Sin tipo";
+}
+
+function renderTypeList(state) {
+  typeItems.innerHTML = "";
+
+  (state.questionTypes || []).forEach((type) => {
+    const row = document.createElement("tr");
+
+    const nameCell = document.createElement("td");
+    nameCell.textContent = type.name;
+
+    const descriptionCell = document.createElement("td");
+    descriptionCell.textContent = type.description || "-";
+
+    const actionsCell = document.createElement("td");
+    actionsCell.className = "question-actions";
+
+    const editButton = document.createElement("button");
+    editButton.type = "button";
+    editButton.className = "question-action-btn";
+    editButton.textContent = "Editar";
+    editButton.addEventListener("click", () => openTypeModal({ mode: "edit", type }));
+
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "question-action-btn danger";
+    deleteButton.textContent = "Eliminar";
+    deleteButton.addEventListener("click", async () => {
+      const confirmed = window.confirm("¿Eliminar este tipo de preguntas?");
+      if (!confirmed) {
+        return;
+      }
+
+      try {
+        await dispatch("DELETE_QUESTION_TYPE", { id: type.id });
+      } catch (error) {
+        typesSummaryEl.textContent = error?.message || "No se pudo eliminar el tipo.";
+      }
+    });
+
+    actionsCell.appendChild(editButton);
+    actionsCell.appendChild(deleteButton);
+    row.appendChild(nameCell);
+    row.appendChild(descriptionCell);
+    row.appendChild(actionsCell);
+    typeItems.appendChild(row);
+  });
 }
 
 function renderSortButtons() {
@@ -272,6 +403,12 @@ function renderQuestionList(state) {
     const textCell = document.createElement("td");
     textCell.className = "question-cell";
     textCell.textContent = item.question;
+
+    const typeCell = document.createElement("td");
+    typeCell.textContent = getTypeName(state, item.typeId);
+
+    const displayOrderCell = document.createElement("td");
+    displayOrderCell.textContent = String(Number(item.displayOrder) || 1);
 
     const actionsCell = document.createElement("td");
     actionsCell.className = "question-actions";
@@ -324,6 +461,8 @@ function renderQuestionList(state) {
 
     row.appendChild(orderCell);
     row.appendChild(textCell);
+    row.appendChild(typeCell);
+    row.appendChild(displayOrderCell);
     row.appendChild(actionsCell);
 
     questionItems.appendChild(row);
@@ -333,7 +472,7 @@ function renderQuestionList(state) {
       expandedRow.className = "answers-expanded-row";
 
       const expandedCell = document.createElement("td");
-      expandedCell.colSpan = 3;
+      expandedCell.colSpan = 5;
 
       const wrapper = document.createElement("div");
       wrapper.className = "answers-expanded-wrap";
@@ -425,6 +564,8 @@ function renderQuestionList(state) {
             question: {
               id: item.id || `q${Date.now()}`,
               question: item.question,
+              typeId: item.typeId,
+              displayOrder: Number(item.displayOrder) || 1,
               answers: nextAnswers,
             },
           });
@@ -450,6 +591,9 @@ function renderQuestionList(state) {
 function render(state) {
   handleGlobalSound(state);
   currentState = state;
+
+  typesSummaryEl.textContent = `Total de tipos: ${(state.questionTypes || []).length} · Tipo activo de partida: ${getTypeName(state, state.ui?.activeQuestionTypeId)}`;
+  renderTypeList(state);
 
   if (!state.questions.length) {
     summaryEl.textContent = isSupabaseConnected()
@@ -498,13 +642,21 @@ function attachEvents() {
   newQuestionButton.addEventListener("click", async () => {
     openQuestionModal({ mode: "create" });
   });
+  newTypeButton.addEventListener("click", () => openTypeModal({ mode: "create" }));
 
   questionModalCancel.addEventListener("click", closeQuestionModal);
   questionModalSave.addEventListener("click", saveQuestionFromModal);
+  typeModalCancel.addEventListener("click", closeTypeModal);
+  typeModalSave.addEventListener("click", saveTypeFromModal);
   successModalClose.addEventListener("click", closeSuccessModal);
   successModal.addEventListener("click", (event) => {
     if (event.target === successModal) {
       closeSuccessModal();
+    }
+  });
+  typeModal.addEventListener("click", (event) => {
+    if (event.target === typeModal) {
+      closeTypeModal();
     }
   });
   questionModalInput.addEventListener("keydown", (event) => {
@@ -513,10 +665,21 @@ function attachEvents() {
       saveQuestionFromModal();
     }
   });
+  typeModalNameInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      saveTypeFromModal();
+    }
+  });
 
   window.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && !successModal.classList.contains("hidden")) {
-      closeSuccessModal();
+    if (event.key === "Escape") {
+      if (!successModal.classList.contains("hidden")) {
+        closeSuccessModal();
+      }
+      if (!typeModal.classList.contains("hidden")) {
+        closeTypeModal();
+      }
     }
   });
 

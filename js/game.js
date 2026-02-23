@@ -1,4 +1,4 @@
-import { dispatch, initializeState, subscribe } from "./state.js";
+import { dispatch, getPlayableQuestions, initializeState, subscribe } from "./state.js";
 
 const scoreAEl = document.getElementById("score-a");
 const scoreBEl = document.getElementById("score-b");
@@ -193,7 +193,8 @@ async function loadDefaultQuestions() {
 }
 
 function renderAnswers(state) {
-  const question = state.questions[state.round.questionIndex];
+  const playableQuestions = getPlayableQuestions(state);
+  const question = playableQuestions[state.round.questionIndex];
   answersListEl.innerHTML = "";
 
   question.answers.forEach((answer, index) => {
@@ -217,7 +218,8 @@ function renderAnswers(state) {
 function render(state) {
   handleGlobalSound(state);
 
-  const question = state.questions[state.round.questionIndex];
+  const playableQuestions = getPlayableQuestions(state);
+  const question = playableQuestions[state.round.questionIndex];
 
   teamNameAEl.textContent = state.teams.A.name;
   teamNameBEl.textContent = state.teams.B.name;
@@ -261,8 +263,8 @@ function render(state) {
   maybeRedirectCaptain(state);
 
   if (!question) {
-    if ((state.questions || []).length && state.round.questionIndex < 0) {
-      roundLabelEl.textContent = `Pregunta 0 / ${state.questions.length}`;
+    if (playableQuestions.length && state.round.questionIndex < 0) {
+      roundLabelEl.textContent = `Pregunta 0 / ${playableQuestions.length}`;
       questionTextEl.textContent = "Esperando inicio de ronda";
     } else {
       roundLabelEl.textContent = "Sin preguntas";
@@ -272,7 +274,7 @@ function render(state) {
     return;
   }
 
-  roundLabelEl.textContent = `Pregunta ${state.round.questionIndex + 1} / ${state.questions.length}`;
+  roundLabelEl.textContent = `Pregunta ${state.round.questionIndex + 1} / ${playableQuestions.length}`;
   questionTextEl.textContent = question.question;
 
   renderAnswers(state);

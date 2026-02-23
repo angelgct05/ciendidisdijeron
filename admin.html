@@ -42,9 +42,10 @@
           </div>
           <div class="strikes-block">
             <p>Strikes: <strong id="admin-strikes-a">0</strong></p>
-            <button id="add-strike-a" type="button">Agregar Strike</button>
           </div>
           <div class="team-members">
+            <label for="captain-select-a">Capitán</label>
+            <select id="captain-select-a" class="captain-select"></select>
             <h4>Integrantes</h4>
             <ul id="team-members-a" class="team-members-list"></ul>
           </div>
@@ -61,9 +62,10 @@
           </div>
           <div class="strikes-block">
             <p>Strikes: <strong id="admin-strikes-b">0</strong></p>
-            <button id="add-strike-b" type="button">Agregar Strike</button>
           </div>
           <div class="team-members">
+            <label for="captain-select-b">Capitán</label>
+            <select id="captain-select-b" class="captain-select"></select>
             <h4>Integrantes</h4>
             <ul id="team-members-b" class="team-members-list"></ul>
           </div>
@@ -79,6 +81,10 @@
             <option value="2">Doble (x2)</option>
             <option value="3">Triple (x3)</option>
           </select>
+        </div>
+        <div class="round-multiplier-row">
+          <label for="game-question-type-select">Tipo de partida</label>
+          <select id="game-question-type-select" class="round-multiplier-select"></select>
         </div>
         <div class="control-grid">
           <button id="toggle-qr">Mostrar QR</button>
@@ -96,6 +102,7 @@
           <div class="question-center-actions">
             <button id="award-revealed-points">Termina Ronda</button>
             <button id="steal-revealed-points">Robo de Puntos</button>
+            <button id="add-strike-control">Agregar Strike</button>
           </div>
           <button id="next-question">Siguiente Pregunta</button>
         </div>

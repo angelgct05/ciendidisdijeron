@@ -27,6 +27,27 @@
       </header>
 
       <section class="editor-card">
+        <h3>Tipos de Preguntas</h3>
+        <p id="types-summary" class="hint"></p>
+        <div class="questions-list-header">
+          <h4>Tipos disponibles</h4>
+          <button id="new-type" type="button" class="question-action-btn">Nuevo Tipo</button>
+        </div>
+        <div class="questions-table-wrap">
+          <table class="questions-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Descripción</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="type-items"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="editor-card">
         <h3>Preguntas de la Sala</h3>
         <p id="questions-summary" class="hint"></p>
         <div class="editor-layout questions-full">
@@ -41,6 +62,8 @@
                   <tr>
                     <th><button type="button" class="sort-btn" data-sort="index">#</button></th>
                     <th><button type="button" class="sort-btn" data-sort="question">Pregunta</button></th>
+                    <th>Tipo</th>
+                    <th>Orden</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
@@ -55,10 +78,25 @@
         <div class="mini-modal-card">
           <h3 id="question-modal-title">Pregunta</h3>
           <input id="question-modal-input" placeholder="Escribe la pregunta" />
+          <select id="question-modal-type-select"></select>
+          <input id="question-modal-order-input" type="number" min="1" step="1" placeholder="Orden de visualización" />
           <p id="question-modal-error" class="error-text"></p>
           <div class="mini-modal-actions">
             <button id="question-modal-cancel" type="button" class="danger">Cancelar</button>
             <button id="question-modal-save" type="button">Guardar</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="type-modal" class="mini-modal hidden" role="dialog" aria-modal="true" aria-labelledby="type-modal-title">
+        <div class="mini-modal-card">
+          <h3 id="type-modal-title">Tipo</h3>
+          <input id="type-modal-name-input" placeholder="Nombre del tipo" />
+          <input id="type-modal-description-input" placeholder="Descripción corta" />
+          <p id="type-modal-error" class="error-text"></p>
+          <div class="mini-modal-actions">
+            <button id="type-modal-cancel" type="button" class="danger">Cancelar</button>
+            <button id="type-modal-save" type="button">Guardar</button>
           </div>
         </div>
       </div>

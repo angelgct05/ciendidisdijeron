@@ -1,4 +1,4 @@
-import { dispatch, getState, initializeState, subscribe, subscribeConnectionStatus } from "./state.js";
+import { dispatch, getPlayableQuestions, getState, initializeState, subscribe, subscribeConnectionStatus } from "./state.js";
 
 const ADMIN_PIN = "2026";
 const ADMIN_AUTH_KEY = "fm100_admin_auth";
@@ -20,8 +20,8 @@ const adminScoreA = document.getElementById("admin-score-a");
 const adminScoreB = document.getElementById("admin-score-b");
 const adminStrikesA = document.getElementById("admin-strikes-a");
 const adminStrikesB = document.getElementById("admin-strikes-b");
-const addStrikeAButton = document.getElementById("add-strike-a");
-const addStrikeBButton = document.getElementById("add-strike-b");
+const captainSelectA = document.getElementById("captain-select-a");
+const captainSelectB = document.getElementById("captain-select-b");
 const scoreDeltaInputA = document.getElementById("score-delta-a");
 const scoreDeltaInputB = document.getElementById("score-delta-b");
 const teamMembersA = document.getElementById("team-members-a");
@@ -30,8 +30,10 @@ const toggleQrButton = document.getElementById("toggle-qr");
 const clearRoundControlButton = document.getElementById("clear-round-control");
 const awardRevealedPointsButton = document.getElementById("award-revealed-points");
 const stealRevealedPointsButton = document.getElementById("steal-revealed-points");
+const addStrikeControlButton = document.getElementById("add-strike-control");
 const logoutAllPlayersButton = document.getElementById("logout-all-players");
 const roundMultiplierSelect = document.getElementById("round-multiplier-select");
+const gameQuestionTypeSelect = document.getElementById("game-question-type-select");
 const resetRoundButton = document.getElementById("reset-round");
 const nextQuestionButton = document.getElementById("next-question");
 const prevQuestionButton = document.getElementById("prev-question");
@@ -161,8 +163,13 @@ async function loadDefaultQuestions() {
 }
 
 function renderAdminAnswers(state) {
-  const question = state.questions[state.round.questionIndex];
+  const playableQuestions = getPlayableQuestions(state);
+  const question = playableQuestions[state.round.questionIndex];
   adminAnswersList.innerHTML = "";
+
+  if (!question) {
+    return;
+  }
 
   question.answers.forEach((answer, index) => {
     const item = document.createElement("li");
@@ -207,7 +214,8 @@ function renderBuzzerInfo(state) {
 }
 
 function getRevealedPointsTotal(state) {
-  const question = state.questions[state.round.questionIndex];
+  const playableQuestions = getPlayableQuestions(state);
+  const question = playableQuestions[state.round.questionIndex];
   if (!question) {
     return 0;
   }
@@ -251,7 +259,6 @@ function syncInputValue(input, value) {
 
 function renderTeamMembers(state, team, container) {
   const players = (state.players || []).filter((player) => player.active && player.team === team);
-  const currentCaptainId = state.round?.captains?.[team] || null;
   container.innerHTML = "";
 
   if (!players.length) {
@@ -263,31 +270,14 @@ function renderTeamMembers(state, team, container) {
   }
 
   players.forEach((player) => {
-    const isCaptain = player.id === currentCaptainId;
     const item = document.createElement("li");
     item.className = "team-member-item";
     item.innerHTML = `
       <span>${player.name}</span>
       <div class="team-member-actions">
-        ${isCaptain ? '<span class="captain-badge">Capitán</span>' : `<button type="button" class="question-action-btn" data-player-captain="${player.id}">Elegir Capitán</button>`}
-        ${isCaptain ? `<button type="button" class="question-action-btn" data-remove-captain="${team}">Quitar Capitán</button>` : ""}
         <button type="button" class="question-action-btn" data-player-logout="${player.id}">Cerrar sesión</button>
       </div>
     `;
-
-    const captainButton = item.querySelector("[data-player-captain]");
-    if (captainButton) {
-      captainButton.addEventListener("click", () => {
-        dispatch("SET_ROUND_CAPTAIN", { team, playerId: player.id });
-      });
-    }
-
-    const removeCaptainButton = item.querySelector("[data-remove-captain]");
-    if (removeCaptainButton) {
-      removeCaptainButton.addEventListener("click", () => {
-        dispatch("SET_ROUND_CAPTAIN", { team, playerId: null });
-      });
-    }
 
     const logoutButton = item.querySelector("[data-player-logout]");
     logoutButton.addEventListener("click", () => {
@@ -298,10 +288,50 @@ function renderTeamMembers(state, team, container) {
   });
 }
 
+function renderCaptainSelect(state, team, selectEl) {
+  const players = (state.players || []).filter((player) => player.active && player.team === team);
+  const currentCaptainId = state.round?.captains?.[team] || "";
+  selectEl.innerHTML = "";
+
+  const noneOption = document.createElement("option");
+  noneOption.value = "";
+  noneOption.textContent = "No hay capitán";
+  selectEl.appendChild(noneOption);
+
+  players.forEach((player) => {
+    const option = document.createElement("option");
+    option.value = player.id;
+    option.textContent = player.name;
+    selectEl.appendChild(option);
+  });
+
+  const validCaptain = players.some((player) => player.id === currentCaptainId);
+  if (document.activeElement !== selectEl) {
+    selectEl.value = validCaptain ? currentCaptainId : "";
+  }
+}
+
+function renderQuestionTypeSelect(state) {
+  const selectedTypeId = state.ui?.activeQuestionTypeId || "";
+  gameQuestionTypeSelect.innerHTML = "";
+
+  (state.questionTypes || []).forEach((type) => {
+    const option = document.createElement("option");
+    option.value = type.id;
+    option.textContent = type.name;
+    gameQuestionTypeSelect.appendChild(option);
+  });
+
+  if (document.activeElement !== gameQuestionTypeSelect) {
+    gameQuestionTypeSelect.value = selectedTypeId;
+  }
+}
+
 function render(state) {
   handleGlobalSound(state);
 
-  const question = state.questions[state.round.questionIndex];
+  const playableQuestions = getPlayableQuestions(state);
+  const question = playableQuestions[state.round.questionIndex];
 
   adminTeamNameA.textContent = state.teams.A.name;
   adminTeamNameB.textContent = state.teams.B.name;
@@ -314,6 +344,9 @@ function render(state) {
   adminStrikesB.textContent = String(state.teams.B.strikes || 0);
   renderTeamMembers(state, "A", teamMembersA);
   renderTeamMembers(state, "B", teamMembersB);
+  renderCaptainSelect(state, "A", captainSelectA);
+  renderCaptainSelect(state, "B", captainSelectB);
+  renderQuestionTypeSelect(state);
   toggleQrButton.textContent = state.ui?.showQr ? "Ocultar QR" : "Mostrar QR";
   const controlTeam = state.round.buzzerWinner;
   adminTeamControlBadgeA.textContent = controlTeam === "A" ? "TIENEN EL CONTROL" : "";
@@ -334,12 +367,13 @@ function render(state) {
   }
   awardRevealedPointsButton.disabled = !(controlTeam === "A" || controlTeam === "B") || revealedPoints <= 0;
   stealRevealedPointsButton.disabled = !(controlTeam === "A" || controlTeam === "B") || revealedPoints <= 0;
+  addStrikeControlButton.disabled = !(controlTeam === "A" || controlTeam === "B");
   prevQuestionButton.disabled = state.round.questionIndex <= 0;
-  nextQuestionButton.disabled = state.round.questionIndex >= state.questions.length - 1;
+  nextQuestionButton.disabled = state.round.questionIndex >= playableQuestions.length - 1;
 
   if (!question) {
-    if ((state.questions || []).length && state.round.questionIndex < 0) {
-      adminRoundLabel.textContent = `Pregunta 0 / ${state.questions.length}`;
+    if (playableQuestions.length && state.round.questionIndex < 0) {
+      adminRoundLabel.textContent = `Pregunta 0 / ${playableQuestions.length}`;
       adminQuestionText.textContent = "Presiona Siguiente Pregunta para iniciar";
     } else {
       adminRoundLabel.textContent = "Sin preguntas";
@@ -349,7 +383,7 @@ function render(state) {
     return;
   }
 
-  adminRoundLabel.textContent = `Pregunta ${state.round.questionIndex + 1} / ${state.questions.length}`;
+  adminRoundLabel.textContent = `Pregunta ${state.round.questionIndex + 1} / ${playableQuestions.length}`;
   adminQuestionText.textContent = question.question;
 
   renderAdminAnswers(state);
@@ -413,11 +447,13 @@ function attachEvents() {
   clearRoundControlButton.addEventListener("click", () => {
     dispatch("CLEAR_ROUND_CONTROL");
   });
-  addStrikeAButton.addEventListener("click", () => {
-    dispatch("ADD_STRIKE", { team: "A" });
-  });
-  addStrikeBButton.addEventListener("click", () => {
-    dispatch("ADD_STRIKE", { team: "B" });
+  addStrikeControlButton.addEventListener("click", () => {
+    const controlTeam = getState().round?.buzzerWinner;
+    if (controlTeam !== "A" && controlTeam !== "B") {
+      return;
+    }
+
+    dispatch("ADD_STRIKE", { team: controlTeam });
   });
   awardRevealedPointsButton.addEventListener("click", () => {
     const state = getState();
@@ -459,6 +495,13 @@ function attachEvents() {
     }
 
     dispatch("SET_ROUND_MULTIPLIER", { multiplier: value });
+  });
+  gameQuestionTypeSelect.addEventListener("change", () => {
+    if (!gameQuestionTypeSelect.value) {
+      return;
+    }
+
+    dispatch("SET_ACTIVE_QUESTION_TYPE", { id: gameQuestionTypeSelect.value });
   });
   logoutAllPlayersButton.addEventListener("click", () => {
     openConfirmModal("¿Seguro que deseas cerrar la sesión de todos los jugadores?", () => dispatch("LOGOUT_ALL_PLAYERS"));
@@ -509,6 +552,8 @@ function attachEvents() {
   teamNameInputB.addEventListener("change", () => updateTeamName("B", teamNameInputB));
   teamNameInputA.addEventListener("blur", () => updateTeamName("A", teamNameInputA));
   teamNameInputB.addEventListener("blur", () => updateTeamName("B", teamNameInputB));
+  captainSelectA.addEventListener("change", () => dispatch("SET_ROUND_CAPTAIN", { team: "A", playerId: captainSelectA.value || null }));
+  captainSelectB.addEventListener("change", () => dispatch("SET_ROUND_CAPTAIN", { team: "B", playerId: captainSelectB.value || null }));
 
   [
     [teamNameInputA, "A"],

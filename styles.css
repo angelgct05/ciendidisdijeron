@@ -405,6 +405,10 @@ h1, h2, h3, h4, p {
   gap: 0.5rem;
 }
 
+#add-strike-control {
+  margin-left: 0.2rem;
+}
+
 .question-nav-controls #next-question {
   justify-self: end;
 }
@@ -455,6 +459,25 @@ button,
   margin: 0 0 0.35rem;
   font-size: 0.9rem;
   color: var(--muted);
+}
+
+.team-members label {
+  display: block;
+  margin: 0 0 0.3rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.captain-select {
+  width: 100%;
+  border: 1px solid rgba(90, 90, 90, 0.35);
+  background: #f6f4f4;
+  color: var(--text);
+  border-radius: 10px;
+  padding: 0.45rem 0.6rem;
+  min-height: 40px;
+  margin-bottom: 0.45rem;
 }
 
 .team-members-list {
@@ -823,6 +846,19 @@ button:disabled {
   font-size: 1rem;
 }
 
+#question-modal-type-select,
+#question-modal-order-input,
+#type-modal-name-input,
+#type-modal-description-input {
+  min-height: 44px;
+  border: 1px solid rgba(90, 90, 90, 0.35);
+  background: #f6f4f4;
+  color: var(--text);
+  border-radius: 10px;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.95rem;
+}
+
 .qr-modal-image {
   width: min(86vw, 560px);
   max-height: 86vh;
@@ -954,6 +990,7 @@ button:disabled {
   .question-nav-controls #prev-question,
   .question-nav-controls #award-revealed-points,
   .question-nav-controls #steal-revealed-points,
+  .question-nav-controls #add-strike-control,
   .question-nav-controls #next-question {
     justify-self: stretch;
     width: 100%;

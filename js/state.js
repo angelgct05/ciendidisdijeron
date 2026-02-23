@@ -4,6 +4,8 @@ import { ROOM_CODE, SUPABASE_ANON_KEY, SUPABASE_URL } from "./config.js";
 const STORAGE_KEY = "fm100_state_v1";
 const CHANNEL_NAME = "fm100_channel";
 const QUESTION_ACTIONS = new Set(["SET_QUESTIONS", "UPSERT_QUESTION", "DELETE_QUESTION"]);
+const DEFAULT_QUESTION_TYPE_ID = "general";
+const DEFAULT_QUESTION_TYPE_NAME = "General";
 
 let state = null;
 let channel = null;
@@ -22,15 +24,62 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-function normalizeQuestions(questions) {
+function normalizeQuestionTypes(questionTypes) {
+  const fallback = [{ id: DEFAULT_QUESTION_TYPE_ID, name: DEFAULT_QUESTION_TYPE_NAME, description: "Categoría principal" }];
+  if (!Array.isArray(questionTypes) || !questionTypes.length) {
+    return fallback;
+  }
+
+  const normalized = questionTypes
+    .map((item, index) => {
+      const rawId = String(item?.id || "").trim();
+      const id = rawId || `type-${index + 1}`;
+      const name = String(item?.name || "").trim().slice(0, 40);
+      const description = String(item?.description || "").trim().slice(0, 180);
+      if (!name) {
+        return null;
+      }
+
+      return {
+        id,
+        name,
+        description,
+      };
+    })
+    .filter(Boolean);
+
+  if (!normalized.length) {
+    return fallback;
+  }
+
+  const seen = new Set();
+  return normalized.filter((item) => {
+    if (seen.has(item.id)) {
+      return false;
+    }
+    seen.add(item.id);
+    return true;
+  });
+}
+
+function normalizeQuestions(questions, questionTypes = []) {
   if (!Array.isArray(questions) || !questions.length) {
     return [];
   }
+
+  const typeIds = new Set((questionTypes || []).map((item) => item.id));
+  const fallbackTypeId = (questionTypes || [])[0]?.id || DEFAULT_QUESTION_TYPE_ID;
 
   return questions
     .map((item, index) => ({
       id: item.id || `q${index + 1}`,
       question: String(item.question || "Pregunta sin texto"),
+      typeId: typeIds.has(String(item.typeId || item.type_id || "").trim())
+        ? String(item.typeId || item.type_id).trim()
+        : fallbackTypeId,
+      displayOrder: Number.isInteger(Number(item.displayOrder ?? item.display_order))
+        ? Math.max(1, Number(item.displayOrder ?? item.display_order))
+        : index + 1,
       answers: Array.isArray(item.answers)
         ? item.answers
             .map((answer) => ({
@@ -41,6 +90,19 @@ function normalizeQuestions(questions) {
         : [],
     }))
     .filter((item) => item.answers.length > 0);
+}
+
+function getQuestionsByType(questions, typeId) {
+  return (questions || [])
+    .filter((question) => question.typeId === typeId)
+    .sort((left, right) => {
+      const orderDiff = Number(left.displayOrder || 0) - Number(right.displayOrder || 0);
+      if (orderDiff !== 0) {
+        return orderDiff;
+      }
+
+      return String(left.question || "").localeCompare(String(right.question || ""), "es", { sensitivity: "base" });
+    });
 }
 
 function normalizeTeamName(value, fallback) {
@@ -73,7 +135,8 @@ function normalizePlayers(players) {
 }
 
 function createInitialState(defaultQuestions = []) {
-  const questions = normalizeQuestions(defaultQuestions);
+  const questionTypes = normalizeQuestionTypes([]);
+  const questions = normalizeQuestions(defaultQuestions, questionTypes);
 
   return {
     version: 1,
@@ -82,6 +145,7 @@ function createInitialState(defaultQuestions = []) {
       A: { name: "Equipo A", score: 0, strikes: 0 },
       B: { name: "Equipo B", score: 0, strikes: 0 },
     },
+    questionTypes,
     questions,
     round: {
       questionIndex: -1,
@@ -97,6 +161,7 @@ function createInitialState(defaultQuestions = []) {
     players: [],
     ui: {
       showQr: false,
+      activeQuestionTypeId: questionTypes[0].id,
       logoutAllVersion: 0,
       teamBackAlertTeam: null,
       teamBackAlertVersion: 0,
@@ -112,8 +177,14 @@ function validateState(nextState, fallbackQuestions = []) {
     return createInitialState(fallbackQuestions);
   }
 
-  const questions = normalizeQuestions(nextState.questions?.length ? nextState.questions : fallbackQuestions);
-  const maxQuestionIndex = Math.max(-1, questions.length - 1);
+  const questionTypes = normalizeQuestionTypes(nextState.questionTypes);
+  const activeQuestionTypeId = questionTypes.some((item) => item.id === nextState.ui?.activeQuestionTypeId)
+    ? nextState.ui.activeQuestionTypeId
+    : questionTypes[0].id;
+
+  const questions = normalizeQuestions(nextState.questions?.length ? nextState.questions : fallbackQuestions, questionTypes);
+  const activeQuestions = getQuestionsByType(questions, activeQuestionTypeId);
+  const maxQuestionIndex = Math.max(-1, activeQuestions.length - 1);
   const incomingQuestionIndex = Number(nextState.round?.questionIndex);
   const normalizedQuestionIndex = Number.isInteger(incomingQuestionIndex) ? incomingQuestionIndex : -1;
   const safeQuestionIndex = questions.length
@@ -141,6 +212,7 @@ function validateState(nextState, fallbackQuestions = []) {
         strikes: Math.max(0, Number(nextState.teams?.B?.strikes) || 0),
       },
     },
+    questionTypes,
     questions,
     round: {
       questionIndex: safeQuestionIndex,
@@ -160,6 +232,7 @@ function validateState(nextState, fallbackQuestions = []) {
     players: normalizePlayers(nextState.players),
     ui: {
       showQr: Boolean(nextState.ui?.showQr),
+      activeQuestionTypeId,
       logoutAllVersion: Number.isFinite(Number(nextState.ui?.logoutAllVersion))
         ? Number(nextState.ui.logoutAllVersion)
         : 0,
@@ -253,6 +326,16 @@ export function getState() {
   return clone(state);
 }
 
+export function getPlayableQuestions(snapshot = null) {
+  const source = snapshot || state;
+  if (!source) {
+    return [];
+  }
+
+  const activeTypeId = source.ui?.activeQuestionTypeId || source.questionTypes?.[0]?.id || DEFAULT_QUESTION_TYPE_ID;
+  return clone(getQuestionsByType(source.questions || [], activeTypeId));
+}
+
 export function subscribe(callback) {
   listeners.add(callback);
   callback(getState());
@@ -280,7 +363,9 @@ export function subscribeConnectionStatus(callback) {
 }
 
 function clampQuestionIndex(nextIndex) {
-  const max = Math.max(-1, state.questions.length - 1);
+  const activeTypeId = state.ui?.activeQuestionTypeId || state.questionTypes?.[0]?.id || DEFAULT_QUESTION_TYPE_ID;
+  const activeQuestions = getQuestionsByType(state.questions || [], activeTypeId);
+  const max = Math.max(-1, activeQuestions.length - 1);
   return Math.min(Math.max(nextIndex, -1), max);
 }
 
@@ -511,7 +596,7 @@ function applyActionLocal(action, payload = {}) {
       break;
     }
     case "SET_QUESTIONS": {
-      const normalized = normalizeQuestions(payload.questions);
+      const normalized = normalizeQuestions(payload.questions, state.questionTypes);
       if (!normalized.length) {
         break;
       }
@@ -523,7 +608,7 @@ function applyActionLocal(action, payload = {}) {
     }
     case "UPSERT_QUESTION": {
       const index = Number(payload.index);
-      const question = normalizeQuestions([payload.question])[0];
+      const question = normalizeQuestions([payload.question], state.questionTypes)[0];
       if (!question) {
         break;
       }
@@ -535,6 +620,65 @@ function applyActionLocal(action, payload = {}) {
       }
 
       state.round.questionIndex = clampQuestionIndex(state.round.questionIndex);
+      break;
+    }
+    case "UPSERT_QUESTION_TYPE": {
+      const id = String(payload.id || "").trim() || `type-${Date.now()}`;
+      const name = String(payload.name || "").trim().slice(0, 40);
+      const description = String(payload.description || "").trim().slice(0, 180);
+      if (!name) {
+        break;
+      }
+
+      const existingIndex = state.questionTypes.findIndex((item) => item.id === id);
+      if (existingIndex >= 0) {
+        state.questionTypes[existingIndex] = { id, name, description };
+      } else {
+        state.questionTypes.push({ id, name, description });
+      }
+      break;
+    }
+    case "DELETE_QUESTION_TYPE": {
+      const id = String(payload.id || "").trim();
+      if (!id || state.questionTypes.length <= 1) {
+        break;
+      }
+
+      const fallbackTypeId = state.questionTypes.find((item) => item.id !== id)?.id;
+      if (!fallbackTypeId) {
+        break;
+      }
+
+      state.questionTypes = state.questionTypes.filter((item) => item.id !== id);
+      state.questions = state.questions.map((question) => {
+        if (question.typeId !== id) {
+          return question;
+        }
+
+        return {
+          ...question,
+          typeId: fallbackTypeId,
+        };
+      });
+
+      if (state.ui.activeQuestionTypeId === id) {
+        state.ui.activeQuestionTypeId = fallbackTypeId;
+        state.round.questionIndex = -1;
+        resetRoundInternals();
+      }
+      break;
+    }
+    case "SET_ACTIVE_QUESTION_TYPE": {
+      const id = String(payload.id || "").trim();
+      if (!state.questionTypes.some((item) => item.id === id)) {
+        break;
+      }
+
+      if (state.ui.activeQuestionTypeId !== id) {
+        state.ui.activeQuestionTypeId = id;
+        state.round.questionIndex = -1;
+        resetRoundInternals();
+      }
       break;
     }
     case "DELETE_QUESTION": {
@@ -677,11 +821,22 @@ async function loadQuestionsFromSupabase() {
     return null;
   }
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("game_questions")
-    .select("position,question,answers")
+    .select("position,question,answers,type_id,display_order")
     .eq("room_code", ROOM_CODE)
     .order("position", { ascending: true });
+
+  if (error) {
+    const legacyResult = await supabase
+      .from("game_questions")
+      .select("position,question,answers")
+      .eq("room_code", ROOM_CODE)
+      .order("position", { ascending: true });
+
+    data = legacyResult.data;
+    error = legacyResult.error;
+  }
 
   if (error) {
     return null;
@@ -690,10 +845,12 @@ async function loadQuestionsFromSupabase() {
   const questions = (data || []).map((row, index) => ({
     id: `q${index + 1}`,
     question: row.question,
+    typeId: row.type_id || undefined,
+    displayOrder: Number.isInteger(Number(row.display_order)) ? Number(row.display_order) : index + 1,
     answers: Array.isArray(row.answers) ? row.answers : [],
   }));
 
-  return normalizeQuestions(questions);
+  return normalizeQuestions(questions, state?.questionTypes || []);
 }
 
 async function replaceQuestionsInSupabase(questions) {
@@ -715,10 +872,23 @@ async function replaceQuestionsInSupabase(questions) {
     position: index,
     question: item.question,
     answers: item.answers,
+    type_id: item.typeId || null,
+    display_order: Number.isInteger(Number(item.displayOrder)) ? Number(item.displayOrder) : index + 1,
     updated_at: new Date().toISOString(),
   }));
 
-  const { error: insertError } = await supabase.from("game_questions").insert(rows);
+  let { error: insertError } = await supabase.from("game_questions").insert(rows);
+  if (insertError) {
+    const legacyRows = rows.map(({ room_code, position, question, answers, updated_at }) => ({
+      room_code,
+      position,
+      question,
+      answers,
+      updated_at,
+    }));
+    const legacyInsert = await supabase.from("game_questions").insert(legacyRows);
+    insertError = legacyInsert.error;
+  }
   if (insertError) {
     return false;
   }
