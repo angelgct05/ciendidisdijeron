@@ -10,6 +10,10 @@ const captainStrikes = document.getElementById("captain-strikes");
 const captainBuzzButton = document.getElementById("captain-buzz");
 const teamBackModalEl = document.getElementById("team-back-modal");
 const teamBackAcceptButton = document.getElementById("team-back-accept");
+const winnerModalEl = document.getElementById("winner-modal");
+const winnerMessageEl = document.getElementById("winner-message");
+const winnerMembersEl = document.getElementById("winner-members");
+const winnerAcceptButtonEl = document.getElementById("winner-accept");
 const strikeOverlayEl = document.getElementById("strike-overlay");
 const strikeOverlayImagesEl = document.getElementById("strike-overlay-images");
 const PLAYER_SESSION_KEY = "fm100_player_session";
@@ -18,6 +22,8 @@ const correctSound = new Audio("./assets/audio/correcto.mp3");
 const incorrectSound = new Audio("./assets/audio/incorrecto.mp3");
 const aJugarSound = new Audio("./assets/audio/a_jugar.mp3");
 const triunfoSound = new Audio("./assets/audio/triunfo.mp3");
+const buttonSound = new Audio("./assets/audio/button.mp3");
+const championsSound = new Audio("./assets/audio/we-are-the-champions.mp3");
 const STRIKE_IMAGE_SRC = "./assets/images/X.png?v=20260223";
 const STRIKE_OVERLAY_DEFAULT_MS = 1200;
 const STRIKE_OVERLAY_MIN_MS = 600;
@@ -27,6 +33,74 @@ let pendingSoundEvent = null;
 let audioUnlockConfigured = false;
 let strikeOverlayTimeoutId = null;
 let strikeSoundDurationMs = STRIKE_OVERLAY_DEFAULT_MS;
+let lastWinnerVersionShown = 0;
+let winnerModalTimeoutId = null;
+
+function getActiveSounds() {
+  return [correctSound, incorrectSound, aJugarSound, triunfoSound, buttonSound];
+}
+
+function isAnyRegularSoundPlaying() {
+  return getActiveSounds().some((sound) => !sound.paused && !sound.ended && sound.currentTime > 0);
+}
+
+function closeWinnerModal() {
+  winnerModalEl.classList.add("hidden");
+  championsSound.pause();
+  championsSound.currentTime = 0;
+}
+
+function renderWinnerMembers(state, team) {
+  const teamPlayers = (state.players || []).filter((player) => player.active && player.team === team);
+  if (!teamPlayers.length) {
+    winnerMembersEl.innerHTML = '<p class="winner-member">¡Gran trabajo, equipo!</p>';
+    return;
+  }
+
+  winnerMembersEl.innerHTML = teamPlayers.map((player) => `<p class="winner-member">✨ ${player.name}</p>`).join("");
+}
+
+function openWinnerModal(state, team) {
+  const teamName = state.teams?.[team]?.name || `Equipo ${team}`;
+  winnerMessageEl.textContent = `¡${teamName} llegó a 500 puntos y ganó la partida!`;
+  renderWinnerMembers(state, team);
+  winnerModalEl.classList.remove("hidden");
+  playSound(championsSound);
+}
+
+function waitForSoundsAndCelebrate(state) {
+  const winnerVersion = Number(state.ui?.winnerVersion) || 0;
+  const winnerTeam = state.ui?.winnerTeam;
+  if ((winnerTeam !== "A" && winnerTeam !== "B") || winnerVersion <= 0 || winnerVersion <= lastWinnerVersionShown) {
+    return;
+  }
+
+  if (winnerModalTimeoutId) {
+    clearTimeout(winnerModalTimeoutId);
+    winnerModalTimeoutId = null;
+  }
+
+  const schedule = () => {
+    if (isAnyRegularSoundPlaying()) {
+      winnerModalTimeoutId = window.setTimeout(schedule, 200);
+      return;
+    }
+
+    winnerModalTimeoutId = window.setTimeout(() => {
+      const latest = getState();
+      if ((Number(latest.ui?.winnerVersion) || 0) !== winnerVersion || latest.ui?.winnerTeam !== winnerTeam) {
+        winnerModalTimeoutId = null;
+        return;
+      }
+
+      openWinnerModal(state, winnerTeam);
+      lastWinnerVersionShown = winnerVersion;
+      winnerModalTimeoutId = null;
+    }, 1000);
+  };
+
+  schedule();
+}
 
 function hideStrikeOverlay() {
   if (!strikeOverlayEl) {
@@ -115,6 +189,10 @@ function getSoundByType(type) {
     return triunfoSound;
   }
 
+  if (type === "button") {
+    return buttonSound;
+  }
+
   return null;
 }
 
@@ -134,7 +212,7 @@ async function tryPlaySoundEvent(type, version) {
 }
 
 async function unlockAudioAndReplay() {
-  const sounds = [correctSound, incorrectSound, aJugarSound, triunfoSound];
+  const sounds = [...getActiveSounds(), championsSound];
   await Promise.allSettled(
     sounds.map(async (sound) => {
       sound.muted = true;
@@ -254,6 +332,7 @@ async function loadDefaultQuestions() {
 
 function render(state) {
   handleGlobalSound(state);
+  waitForSoundsAndCelebrate(state);
 
   const validTeam = resolveTeam();
   if (!validTeam) {
@@ -329,6 +408,8 @@ function attachEvents() {
       onBuzz();
     }
   });
+
+  winnerAcceptButtonEl.addEventListener("click", closeWinnerModal);
 }
 
 async function main() {

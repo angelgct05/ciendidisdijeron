@@ -47,6 +47,10 @@ const adminConfirmModal = document.getElementById("admin-confirm-modal");
 const adminConfirmMessage = document.getElementById("admin-confirm-message");
 const adminConfirmCancelButton = document.getElementById("admin-confirm-cancel");
 const adminConfirmAcceptButton = document.getElementById("admin-confirm-accept");
+const winnerModal = document.getElementById("winner-modal");
+const winnerMessage = document.getElementById("winner-message");
+const winnerMembers = document.getElementById("winner-members");
+const winnerAcceptButton = document.getElementById("winner-accept");
 
 let pendingConfirmAction = null;
 let syncingSelects = 0;
@@ -55,9 +59,13 @@ const correctSound = new Audio("./assets/audio/correcto.mp3");
 const incorrectSound = new Audio("./assets/audio/incorrecto.mp3");
 const aJugarSound = new Audio("./assets/audio/a_jugar.mp3");
 const triunfoSound = new Audio("./assets/audio/triunfo.mp3");
+const buttonSound = new Audio("./assets/audio/button.mp3");
+const championsSound = new Audio("./assets/audio/we-are-the-champions.mp3");
 let lastSoundEventVersion = null;
 let pendingSoundEvent = null;
 let audioUnlockConfigured = false;
+let lastWinnerVersionShown = 0;
+let winnerModalTimeoutId = null;
 
 function runWithSelectSync(callback) {
   syncingSelects += 1;
@@ -102,7 +110,77 @@ function getSoundByType(type) {
     return triunfoSound;
   }
 
+  if (type === "button") {
+    return buttonSound;
+  }
+
   return null;
+}
+
+function getActiveSounds() {
+  return [correctSound, incorrectSound, aJugarSound, triunfoSound, buttonSound];
+}
+
+function isAnyRegularSoundPlaying() {
+  return getActiveSounds().some((sound) => !sound.paused && !sound.ended && sound.currentTime > 0);
+}
+
+function closeWinnerModal() {
+  winnerModal.classList.add("hidden");
+  championsSound.pause();
+  championsSound.currentTime = 0;
+}
+
+function renderWinnerMembers(state, team) {
+  const teamPlayers = (state.players || []).filter((player) => player.active && player.team === team);
+  if (!teamPlayers.length) {
+    winnerMembers.innerHTML = '<p class="winner-member">¡Gran trabajo, equipo!</p>';
+    return;
+  }
+
+  winnerMembers.innerHTML = teamPlayers.map((player) => `<p class="winner-member">✨ ${player.name}</p>`).join("");
+}
+
+function openWinnerModal(state, team) {
+  const teamName = state.teams?.[team]?.name || `Equipo ${team}`;
+  winnerMessage.textContent = `¡${teamName} llegó a 500 puntos y ganó la partida!`;
+  renderWinnerMembers(state, team);
+  winnerModal.classList.remove("hidden");
+  playSound(championsSound);
+}
+
+function waitForSoundsAndCelebrate(state) {
+  const winnerVersion = Number(state.ui?.winnerVersion) || 0;
+  const winnerTeam = state.ui?.winnerTeam;
+  if ((winnerTeam !== "A" && winnerTeam !== "B") || winnerVersion <= 0 || winnerVersion <= lastWinnerVersionShown) {
+    return;
+  }
+
+  if (winnerModalTimeoutId) {
+    clearTimeout(winnerModalTimeoutId);
+    winnerModalTimeoutId = null;
+  }
+
+  const schedule = () => {
+    if (isAnyRegularSoundPlaying()) {
+      winnerModalTimeoutId = window.setTimeout(schedule, 200);
+      return;
+    }
+
+    winnerModalTimeoutId = window.setTimeout(() => {
+      const latest = getState();
+      if ((Number(latest.ui?.winnerVersion) || 0) !== winnerVersion || latest.ui?.winnerTeam !== winnerTeam) {
+        winnerModalTimeoutId = null;
+        return;
+      }
+
+      openWinnerModal(state, winnerTeam);
+      lastWinnerVersionShown = winnerVersion;
+      winnerModalTimeoutId = null;
+    }, 1000);
+  };
+
+  schedule();
 }
 
 async function tryPlaySoundEvent(type, version) {
@@ -121,7 +199,7 @@ async function tryPlaySoundEvent(type, version) {
 }
 
 async function unlockAudioAndReplay() {
-  const sounds = [correctSound, incorrectSound, aJugarSound, triunfoSound];
+  const sounds = [...getActiveSounds(), championsSound];
   await Promise.allSettled(
     sounds.map(async (sound) => {
       sound.muted = true;
@@ -190,6 +268,8 @@ function renderAdminAnswers(state) {
     return;
   }
 
+  const hasControl = state.round?.buzzerWinner === "A" || state.round?.buzzerWinner === "B";
+
   question.answers.forEach((answer, index) => {
     const item = document.createElement("li");
     const visible = state.round.revealed.includes(index);
@@ -206,7 +286,17 @@ function renderAdminAnswers(state) {
     `;
 
     const toggleButton = item.querySelector("[data-answer-toggle]");
+    if (!hasControl) {
+      toggleButton.disabled = true;
+      toggleButton.classList.add("answer-toggle-locked");
+      toggleButton.textContent = "Bloqueado";
+      toggleButton.title = "Debes asignar control de ronda para mostrar/ocultar respuestas.";
+    }
+
     toggleButton.addEventListener("click", () => {
+      if (!hasControl) {
+        return;
+      }
       dispatch("TOGGLE_REVEAL", { answerIndex: index });
     });
 
@@ -359,6 +449,7 @@ function renderQuestionTypeSelect(state) {
 
 function render(state) {
   handleGlobalSound(state);
+  waitForSoundsAndCelebrate(state);
 
   const playableQuestions = getPlayableQuestions(state);
   const question = playableQuestions[state.round.questionIndex];
@@ -487,7 +578,7 @@ function attachEvents() {
 
     dispatch("ADD_STRIKE", { team: controlTeam });
   });
-  awardRevealedPointsButton.addEventListener("click", () => {
+  awardRevealedPointsButton.addEventListener("click", async () => {
     const state = getState();
     const controlTeam = state.round.buzzerWinner;
     if (controlTeam !== "A" && controlTeam !== "B") {
@@ -501,9 +592,10 @@ function attachEvents() {
 
     const multiplier = [1, 2, 3].includes(Number(state.round.pointsMultiplier)) ? Number(state.round.pointsMultiplier) : 1;
 
-    dispatch("ADD_SCORE", { team: controlTeam, points: points * multiplier, playTriumph: true });
+    await dispatch("ADD_SCORE", { team: controlTeam, points: points * multiplier, playTriumph: true });
+    await dispatch("CLEAR_ROUND_CONTROL");
   });
-  stealRevealedPointsButton.addEventListener("click", () => {
+  stealRevealedPointsButton.addEventListener("click", async () => {
     const state = getState();
     const controlTeam = state.round.buzzerWinner;
     if (controlTeam !== "A" && controlTeam !== "B") {
@@ -518,7 +610,8 @@ function attachEvents() {
 
     const multiplier = [1, 2, 3].includes(Number(state.round.pointsMultiplier)) ? Number(state.round.pointsMultiplier) : 1;
 
-    dispatch("ADD_SCORE", { team: targetTeam, points: points * multiplier, playTriumph: true });
+    await dispatch("ADD_SCORE", { team: targetTeam, points: points * multiplier, playTriumph: true });
+    await dispatch("CLEAR_ROUND_CONTROL");
   });
   roundMultiplierSelect.addEventListener("change", (event) => {
     if (!isUserSelectChange(event)) {
@@ -574,7 +667,13 @@ function attachEvents() {
     if (event.key === "Escape" && !adminConfirmModal.classList.contains("hidden")) {
       closeConfirmModal();
     }
+
+    if (event.key === "Escape" && !winnerModal.classList.contains("hidden")) {
+      closeWinnerModal();
+    }
   });
+
+  winnerAcceptButton.addEventListener("click", closeWinnerModal);
 
   logoutAdminButton.addEventListener("click", () => {
     localStorage.removeItem(ADMIN_AUTH_KEY);

@@ -44,6 +44,7 @@ const correctSound = new Audio("./assets/audio/correcto.mp3");
 const incorrectSound = new Audio("./assets/audio/incorrecto.mp3");
 const aJugarSound = new Audio("./assets/audio/a_jugar.mp3");
 const triunfoSound = new Audio("./assets/audio/triunfo.mp3");
+const buttonSound = new Audio("./assets/audio/button.mp3");
 
 let currentState = null;
 let sortBy = "index";
@@ -85,6 +86,10 @@ function getSoundByType(type) {
     return triunfoSound;
   }
 
+  if (type === "button") {
+    return buttonSound;
+  }
+
   return null;
 }
 
@@ -104,7 +109,7 @@ async function tryPlaySoundEvent(type, version) {
 }
 
 async function unlockAudioAndReplay() {
-  const sounds = [correctSound, incorrectSound, aJugarSound, triunfoSound];
+  const sounds = [correctSound, incorrectSound, aJugarSound, triunfoSound, buttonSound];
   await Promise.allSettled(
     sounds.map(async (sound) => {
       sound.muted = true;

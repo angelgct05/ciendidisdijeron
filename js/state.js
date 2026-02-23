@@ -168,6 +168,8 @@ function createInitialState(defaultQuestions = []) {
       logoutAllVersion: 0,
       teamBackAlertTeam: null,
       teamBackAlertVersion: 0,
+      winnerTeam: null,
+      winnerVersion: 0,
       soundEventType: null,
       soundEventVersion: 0,
     },
@@ -245,7 +247,13 @@ function validateState(nextState, fallbackQuestions = []) {
       teamBackAlertVersion: Number.isFinite(Number(nextState.ui?.teamBackAlertVersion))
         ? Number(nextState.ui.teamBackAlertVersion)
         : 0,
-      soundEventType: ["correct", "incorrect", "a_jugar", "triunfo", null].includes(nextState.ui?.soundEventType)
+      winnerTeam: ["A", "B", null].includes(nextState.ui?.winnerTeam)
+        ? nextState.ui.winnerTeam
+        : null,
+      winnerVersion: Number.isFinite(Number(nextState.ui?.winnerVersion))
+        ? Number(nextState.ui.winnerVersion)
+        : 0,
+      soundEventType: ["correct", "incorrect", "a_jugar", "triunfo", "button", null].includes(nextState.ui?.soundEventType)
         ? nextState.ui.soundEventType
         : null,
       soundEventVersion: Number.isFinite(Number(nextState.ui?.soundEventVersion))
@@ -373,7 +381,7 @@ function clampQuestionIndex(nextIndex) {
 }
 
 function emitSoundEvent(type) {
-  if (!["correct", "incorrect", "a_jugar", "triunfo"].includes(type)) {
+  if (!["correct", "incorrect", "a_jugar", "triunfo", "button"].includes(type)) {
     return;
   }
 
@@ -407,6 +415,7 @@ function applyActionLocal(action, payload = {}) {
         if (payload.team === "A" || payload.team === "B") {
           state.round.buzzerWinner = payload.team;
           state.round.status = "locked";
+          emitSoundEvent("button");
         }
       }
       break;
@@ -451,7 +460,14 @@ function applyActionLocal(action, payload = {}) {
         break;
       }
 
+      const previousScore = Number(state.teams[team].score) || 0;
       state.teams[team].score = Math.max(0, state.teams[team].score + points);
+
+      if (!state.ui.winnerTeam && previousScore < 500 && state.teams[team].score >= 500) {
+        state.ui.winnerTeam = team;
+        state.ui.winnerVersion = (Number(state.ui.winnerVersion) || 0) + 1;
+      }
+
       if (payload.playTriumph === true) {
         emitSoundEvent("triunfo");
       }
@@ -702,6 +718,8 @@ function applyActionLocal(action, payload = {}) {
       state.teams.A.score = 0;
       state.teams.B.score = 0;
       state.round.questionIndex = -1;
+      state.ui.winnerTeam = null;
+      state.ui.winnerVersion = 0;
       resetRoundInternals();
       break;
     }
@@ -1175,6 +1193,7 @@ async function dispatchAsync(action, payload = {}) {
 
   if (supabaseEnabled && action === "LOCK_BUZZ") {
     const previousVersion = Number(state.stateVersion) || 0;
+    const hadWinnerBefore = state.round?.buzzerWinner === "A" || state.round?.buzzerWinner === "B";
     const team = payload.team;
     if (team !== "A" && team !== "B") {
       return getState();
@@ -1189,8 +1208,14 @@ async function dispatchAsync(action, payload = {}) {
       const result = data[0];
       if (result?.state) {
         state = validateState(result.state, state.questions || []);
-        if ((Number(state.stateVersion) || 0) <= previousVersion) {
-          state.stateVersion = previousVersion + 1;
+        const hasWinnerNow = state.round?.buzzerWinner === "A" || state.round?.buzzerWinner === "B";
+        const shouldEmitButton = !hadWinnerBefore && hasWinnerNow;
+        if (shouldEmitButton) {
+          emitSoundEvent("button");
+        }
+
+        if ((Number(state.stateVersion) || 0) <= previousVersion || shouldEmitButton) {
+          state.stateVersion = Math.max(previousVersion + 1, Number(state.stateVersion) || 0);
           await upsertRoomState(state);
         }
         persistAndNotify(true);
