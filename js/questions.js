@@ -1,4 +1,4 @@
-import { dispatch, getState, initializeState, isSupabaseConnected, subscribe } from "./state.js";
+import { dispatch, getConnectionStatus, getState, initializeState, isSupabaseConnected, subscribe, subscribeConnectionStatus } from "./state.js";
 
 const ADMIN_PIN = "2026";
 const ADMIN_AUTH_KEY = "fm100_admin_auth";
@@ -9,6 +9,7 @@ const pinInput = document.getElementById("pin-input");
 const pinError = document.getElementById("pin-error");
 const questionsApp = document.getElementById("questions-app");
 const logoutAdminButton = document.getElementById("logout-admin");
+const questionsSupabaseStatus = document.getElementById("questions-supabase-status");
 
 const summaryEl = document.getElementById("questions-summary");
 const typesSummaryEl = document.getElementById("types-summary");
@@ -35,6 +36,10 @@ const typeModalSave = document.getElementById("type-modal-save");
 const successModal = document.getElementById("success-modal");
 const successModalMessage = document.getElementById("success-modal-message");
 const successModalClose = document.getElementById("success-modal-close");
+const questionsConfirmModal = document.getElementById("questions-confirm-modal");
+const questionsConfirmMessage = document.getElementById("questions-confirm-message");
+const questionsConfirmCancel = document.getElementById("questions-confirm-cancel");
+const questionsConfirmAccept = document.getElementById("questions-confirm-accept");
 const correctSound = new Audio("./assets/audio/correcto.mp3");
 const incorrectSound = new Audio("./assets/audio/incorrecto.mp3");
 const aJugarSound = new Audio("./assets/audio/a_jugar.mp3");
@@ -52,6 +57,7 @@ let typeModalId = null;
 let lastSoundEventVersion = null;
 let pendingSoundEvent = null;
 let audioUnlockConfigured = false;
+let pendingConfirmAction = null;
 
 function playSound(sound) {
   if (!sound) {
@@ -258,6 +264,36 @@ function closeSuccessModal() {
   successModal.classList.add("hidden");
 }
 
+function renderSupabaseStatus(status) {
+  questionsSupabaseStatus.classList.remove("status-connected", "status-connecting", "status-disconnected");
+
+  if (status === "connected") {
+    questionsSupabaseStatus.textContent = "Base de Datos: conectado";
+    questionsSupabaseStatus.classList.add("status-connected");
+    return;
+  }
+
+  if (status === "connecting") {
+    questionsSupabaseStatus.textContent = "Base de Datos: conectando...";
+    questionsSupabaseStatus.classList.add("status-connecting");
+    return;
+  }
+
+  questionsSupabaseStatus.textContent = "Base de Datos: no conectado";
+  questionsSupabaseStatus.classList.add("status-disconnected");
+}
+
+function closeConfirmModal() {
+  questionsConfirmModal.classList.add("hidden");
+  pendingConfirmAction = null;
+}
+
+function openConfirmModal(message, onConfirm) {
+  questionsConfirmMessage.textContent = message;
+  pendingConfirmAction = onConfirm;
+  questionsConfirmModal.classList.remove("hidden");
+}
+
 async function saveQuestionFromModal() {
   const questionText = questionModalInput.value.trim();
   const typeId = questionModalTypeSelect.value;
@@ -313,6 +349,20 @@ function getSortedItems(state) {
       return sortDirection === "asc" ? comparison : -comparison;
     }
 
+    if (sortBy === "type") {
+      const leftType = getTypeName(state, left.question.typeId).toLowerCase();
+      const rightType = getTypeName(state, right.question.typeId).toLowerCase();
+      const comparison = leftType.localeCompare(rightType, "es", { sensitivity: "base" });
+      return sortDirection === "asc" ? comparison : -comparison;
+    }
+
+    if (sortBy === "order") {
+      const leftOrder = Number(left.question.displayOrder) || 0;
+      const rightOrder = Number(right.question.displayOrder) || 0;
+      const comparison = leftOrder - rightOrder;
+      return sortDirection === "asc" ? comparison : -comparison;
+    }
+
     const comparison = left.index - right.index;
     return sortDirection === "asc" ? comparison : -comparison;
   });
@@ -331,12 +381,15 @@ function renderTypeList(state) {
     const row = document.createElement("tr");
 
     const nameCell = document.createElement("td");
+    nameCell.dataset.label = "Nombre";
     nameCell.textContent = type.name;
 
     const descriptionCell = document.createElement("td");
+    descriptionCell.dataset.label = "Descripción";
     descriptionCell.textContent = type.description || "-";
 
     const actionsCell = document.createElement("td");
+    actionsCell.dataset.label = "Acciones";
     actionsCell.className = "question-actions";
 
     const editButton = document.createElement("button");
@@ -349,17 +402,14 @@ function renderTypeList(state) {
     deleteButton.type = "button";
     deleteButton.className = "question-action-btn danger";
     deleteButton.textContent = "Eliminar";
-    deleteButton.addEventListener("click", async () => {
-      const confirmed = window.confirm("¿Eliminar este tipo de preguntas?");
-      if (!confirmed) {
-        return;
-      }
-
-      try {
-        await dispatch("DELETE_QUESTION_TYPE", { id: type.id });
-      } catch (error) {
-        typesSummaryEl.textContent = error?.message || "No se pudo eliminar el tipo.";
-      }
+    deleteButton.addEventListener("click", () => {
+      openConfirmModal("¿Eliminar este tipo de preguntas?", async () => {
+        try {
+          await dispatch("DELETE_QUESTION_TYPE", { id: type.id });
+        } catch (error) {
+          typesSummaryEl.textContent = error?.message || "No se pudo eliminar el tipo.";
+        }
+      });
     });
 
     actionsCell.appendChild(editButton);
@@ -372,17 +422,24 @@ function renderTypeList(state) {
 }
 
 function renderSortButtons() {
+  const sortLabel = {
+    index: "#",
+    question: "Pregunta",
+    type: "Tipo",
+    order: "Orden",
+  };
+
   sortButtons.forEach((button) => {
     const isActive = button.dataset.sort === sortBy;
     button.classList.toggle("active", isActive);
 
     if (!isActive) {
-      button.textContent = button.dataset.sort === "index" ? "#" : "Pregunta";
+      button.textContent = sortLabel[button.dataset.sort] || "Ordenar";
       return;
     }
 
     const arrow = sortDirection === "asc" ? "↑" : "↓";
-    button.textContent = button.dataset.sort === "index" ? `# ${arrow}` : `Pregunta ${arrow}`;
+    button.textContent = `${sortLabel[button.dataset.sort] || "Ordenar"} ${arrow}`;
   });
 }
 
@@ -398,19 +455,24 @@ function renderQuestionList(state) {
 
     const orderCell = document.createElement("td");
     orderCell.className = "question-order-cell";
+    orderCell.dataset.label = "#";
     orderCell.textContent = String(index + 1);
 
     const textCell = document.createElement("td");
     textCell.className = "question-cell";
+    textCell.dataset.label = "Pregunta";
     textCell.textContent = item.question;
 
     const typeCell = document.createElement("td");
+    typeCell.dataset.label = "Tipo";
     typeCell.textContent = getTypeName(state, item.typeId);
 
     const displayOrderCell = document.createElement("td");
+    displayOrderCell.dataset.label = "Orden";
     displayOrderCell.textContent = String(Number(item.displayOrder) || 1);
 
     const actionsCell = document.createElement("td");
+    actionsCell.dataset.label = "Acciones";
     actionsCell.className = "question-actions";
 
     const editButton = document.createElement("button");
@@ -430,20 +492,17 @@ function renderQuestionList(state) {
     deleteButton.type = "button";
     deleteButton.className = "question-action-btn danger";
     deleteButton.textContent = "Eliminar";
-    deleteButton.addEventListener("click", async () => {
-      const confirmed = window.confirm("¿Estás seguro de eliminar esta pregunta?");
-      if (!confirmed) {
-        return;
-      }
-
-      try {
-        await dispatch("DELETE_QUESTION", { index });
-        if (expandedQuestionIndex === index) {
-          expandedQuestionIndex = null;
+    deleteButton.addEventListener("click", () => {
+      openConfirmModal("¿Estás seguro de eliminar esta pregunta?", async () => {
+        try {
+          await dispatch("DELETE_QUESTION", { index });
+          if (expandedQuestionIndex === index) {
+            expandedQuestionIndex = null;
+          }
+        } catch (error) {
+          summaryEl.textContent = error?.message || "No se pudo eliminar en Base de Datos.";
         }
-      } catch (error) {
-        summaryEl.textContent = error?.message || "No se pudo eliminar en Base de Datos.";
-      }
+      });
     });
 
     const toggleAnswersButton = document.createElement("button");
@@ -648,6 +707,14 @@ function attachEvents() {
   questionModalSave.addEventListener("click", saveQuestionFromModal);
   typeModalCancel.addEventListener("click", closeTypeModal);
   typeModalSave.addEventListener("click", saveTypeFromModal);
+  questionsConfirmCancel.addEventListener("click", closeConfirmModal);
+  questionsConfirmAccept.addEventListener("click", async () => {
+    const action = pendingConfirmAction;
+    closeConfirmModal();
+    if (action) {
+      await action();
+    }
+  });
   successModalClose.addEventListener("click", closeSuccessModal);
   successModal.addEventListener("click", (event) => {
     if (event.target === successModal) {
@@ -657,6 +724,11 @@ function attachEvents() {
   typeModal.addEventListener("click", (event) => {
     if (event.target === typeModal) {
       closeTypeModal();
+    }
+  });
+  questionsConfirmModal.addEventListener("click", (event) => {
+    if (event.target === questionsConfirmModal) {
+      closeConfirmModal();
     }
   });
   questionModalInput.addEventListener("keydown", (event) => {
@@ -679,6 +751,9 @@ function attachEvents() {
       }
       if (!typeModal.classList.contains("hidden")) {
         closeTypeModal();
+      }
+      if (!questionsConfirmModal.classList.contains("hidden")) {
+        closeConfirmModal();
       }
     }
   });
@@ -711,6 +786,8 @@ async function main() {
     return;
   }
 
+  renderSupabaseStatus(getConnectionStatus());
+
   attachEvents();
 
   let defaults = [];
@@ -721,6 +798,7 @@ async function main() {
   }
 
   await initializeState(defaults);
+  subscribeConnectionStatus(renderSupabaseStatus);
   subscribe(render);
 }
 

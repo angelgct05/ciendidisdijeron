@@ -115,14 +115,22 @@ h1, h2, h3, h4, p {
 }
 
 .question-header-row {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 0.6rem;
 }
 
 .question-header-row .badge {
   margin-bottom: 0;
+}
+
+.question-type-indicator {
+  margin: 0;
+  text-align: center;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.9rem;
 }
 
 .team-control-badge {
@@ -406,7 +414,8 @@ h1, h2, h3, h4, p {
 }
 
 #add-strike-control {
-  margin-left: 0.2rem;
+  margin-left: 0;
+  background: #d32f2f;
 }
 
 .question-nav-controls #next-question {
@@ -945,8 +954,52 @@ button:disabled {
     border-bottom: 1px solid rgba(90, 90, 90, 0.2);
   }
 
+  .questions-table td[data-label] {
+    position: relative;
+    padding-left: 7.8rem;
+    min-height: 2.2rem;
+  }
+
+  .questions-table td[data-label]::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 0.55rem;
+    top: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--muted);
+    width: 6.8rem;
+  }
+
   .question-actions {
-    margin-top: 0.35rem;
+    margin-top: 0.15rem;
+  }
+
+  .question-actions .question-action-btn {
+    width: 100%;
+    margin: 0 0 0.3rem;
+  }
+
+  .question-actions .question-action-btn:last-child {
+    margin-bottom: 0;
+  }
+
+  .question-header-row {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .question-header-row .badge,
+  .question-header-row .question-type-indicator,
+  .question-header-row .round-multiplier-indicator {
+    width: 100%;
+    text-align: center;
+  }
+
+  .question-type-indicator {
+    font-size: 0.86rem;
   }
 
   .answers-config-table,

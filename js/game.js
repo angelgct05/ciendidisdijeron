@@ -12,6 +12,7 @@ const playerIdentityEl = document.getElementById("player-identity");
 const questionTextEl = document.getElementById("question-text");
 const answersListEl = document.getElementById("answers-list");
 const roundLabelEl = document.getElementById("round-label");
+const questionTypeIndicatorEl = document.getElementById("question-type-indicator");
 const roundMultiplierIndicatorEl = document.getElementById("round-multiplier-indicator");
 const qrModalEl = document.getElementById("qr-modal");
 const teamBackModalEl = document.getElementById("team-back-modal");
@@ -220,6 +221,8 @@ function render(state) {
 
   const playableQuestions = getPlayableQuestions(state);
   const question = playableQuestions[state.round.questionIndex];
+  const activeTypeId = state.ui?.activeQuestionTypeId || "";
+  const activeTypeName = (state.questionTypes || []).find((type) => type.id === activeTypeId)?.name || "--";
 
   teamNameAEl.textContent = state.teams.A.name;
   teamNameBEl.textContent = state.teams.B.name;
@@ -256,6 +259,7 @@ function render(state) {
 
   const multiplier = [1, 2, 3].includes(Number(state.round.pointsMultiplier)) ? Number(state.round.pointsMultiplier) : 1;
   roundMultiplierIndicatorEl.textContent = `x${multiplier}`;
+  questionTypeIndicatorEl.textContent = `Tipo: ${activeTypeName}`;
 
   qrModalEl.classList.toggle("hidden", !state.ui?.showQr);
   enforcePlayerSession(state);

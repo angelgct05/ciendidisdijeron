@@ -5,6 +5,7 @@ const team = (params.get("team") || "").toUpperCase();
 
 const captainTitle = document.getElementById("captain-title");
 const captainRoundControl = document.getElementById("captain-round-control");
+const captainQuestionType = document.getElementById("captain-question-type");
 const captainStrikes = document.getElementById("captain-strikes");
 const captainBuzzButton = document.getElementById("captain-buzz");
 const teamBackModalEl = document.getElementById("team-back-modal");
@@ -204,6 +205,10 @@ function render(state) {
   const ownTeamName = state.teams[validTeam]?.name || `Equipo ${validTeam}`;
   captainTitle.textContent = `Capitán ${ownTeamName}`;
   renderTeamBackModal(state, validTeam);
+
+  const activeTypeId = state.ui?.activeQuestionTypeId || "";
+  const activeTypeName = (state.questionTypes || []).find((type) => type.id === activeTypeId)?.name || "--";
+  captainQuestionType.textContent = `Tipo de partida: ${activeTypeName}`;
 
   const controlTeam = state.round.buzzerWinner;
   if (controlTeam === "A" || controlTeam === "B") {

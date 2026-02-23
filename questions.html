@@ -21,6 +21,7 @@
       <header class="topbar">
         <h1>Editor de Preguntas</h1>
         <div class="inline-controls">
+          <span id="questions-supabase-status" class="status-badge status-connecting">Base de Datos: conectando...</span>
           <a class="link-btn" href="./admin.html" target="_blank" rel="noopener">Abrir Panel Admin</a>
           <button id="logout-admin" type="button" class="danger">Cerrar sesión</button>
         </div>
@@ -62,8 +63,8 @@
                   <tr>
                     <th><button type="button" class="sort-btn" data-sort="index">#</button></th>
                     <th><button type="button" class="sort-btn" data-sort="question">Pregunta</button></th>
-                    <th>Tipo</th>
-                    <th>Orden</th>
+                    <th><button type="button" class="sort-btn" data-sort="type">Tipo</button></th>
+                    <th><button type="button" class="sort-btn" data-sort="order">Orden</button></th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
@@ -107,6 +108,17 @@
           <p id="success-modal-message">Las respuestas se guardaron correctamente en Base de Datos.</p>
           <div class="mini-modal-actions">
             <button id="success-modal-close" type="button">Aceptar</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="questions-confirm-modal" class="mini-modal hidden" role="dialog" aria-modal="true" aria-labelledby="questions-confirm-title">
+        <div class="mini-modal-card">
+          <h3 id="questions-confirm-title">Confirmar acción</h3>
+          <p id="questions-confirm-message">¿Estás seguro?</p>
+          <div class="mini-modal-actions">
+            <button id="questions-confirm-cancel" type="button" class="danger">Cancelar</button>
+            <button id="questions-confirm-accept" type="button">Confirmar</button>
           </div>
         </div>
       </div>
