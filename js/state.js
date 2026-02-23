@@ -4,6 +4,7 @@ import { ROOM_CODE, SUPABASE_ANON_KEY, SUPABASE_URL } from "./config.js";
 const STORAGE_KEY = "fm100_state_v1";
 const CHANNEL_NAME = "fm100_channel";
 const QUESTION_ACTIONS = new Set(["SET_QUESTIONS", "UPSERT_QUESTION", "DELETE_QUESTION"]);
+const QUESTION_TYPE_ACTIONS = new Set(["UPSERT_QUESTION_TYPE", "DELETE_QUESTION_TYPE"]);
 const DEFAULT_QUESTION_TYPE_ID = "general";
 const DEFAULT_QUESTION_TYPE_NAME = "General";
 
@@ -12,10 +13,12 @@ let channel = null;
 let supabase = null;
 let realtimeChannel = null;
 let questionsRealtimeChannel = null;
+let questionTypesRealtimeChannel = null;
 let roomSyncInterval = null;
 let supabaseEnabled = false;
 let pendingRoomSync = false;
 let pendingQuestionsSync = false;
+let pendingQuestionTypesSync = false;
 const listeners = new Set();
 const connectionListeners = new Set();
 let connectionStatus = "connecting";
@@ -770,8 +773,27 @@ async function replaceQuestionsInSupabaseWithRetry(questions, attempts = 2) {
   return false;
 }
 
+async function replaceQuestionTypesInSupabaseWithRetry(questionTypes, attempts = 2) {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const synced = await replaceQuestionTypesInSupabase(questionTypes);
+    if (synced) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 async function runRoomSyncCycle() {
   try {
+    if (pendingQuestionTypesSync && state?.questionTypes) {
+      const pushedQuestionTypes = await replaceQuestionTypesInSupabaseWithRetry(state.questionTypes);
+      if (pushedQuestionTypes) {
+        pendingQuestionTypesSync = false;
+        setConnectionStatus("connected");
+      }
+    }
+
     if (pendingQuestionsSync && state?.questions) {
       const pushedQuestions = await replaceQuestionsInSupabaseWithRetry(state.questions);
       if (pushedQuestions) {
@@ -853,6 +875,24 @@ async function loadQuestionsFromSupabase() {
   return normalizeQuestions(questions, state?.questionTypes || []);
 }
 
+async function loadQuestionTypesFromSupabase() {
+  if (!supabaseEnabled || !supabase) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("game_question_types")
+    .select("id,name,description")
+    .eq("room_code", ROOM_CODE)
+    .order("name", { ascending: true });
+
+  if (error) {
+    return null;
+  }
+
+  return normalizeQuestionTypes(data || []);
+}
+
 async function replaceQuestionsInSupabase(questions) {
   if (!supabaseEnabled || !supabase) {
     return false;
@@ -896,6 +936,37 @@ async function replaceQuestionsInSupabase(questions) {
   return true;
 }
 
+async function replaceQuestionTypesInSupabase(questionTypes) {
+  if (!supabaseEnabled || !supabase) {
+    return false;
+  }
+
+  const { error: deleteError } = await supabase.from("game_question_types").delete().eq("room_code", ROOM_CODE);
+  if (deleteError) {
+    return false;
+  }
+
+  const normalizedTypes = normalizeQuestionTypes(questionTypes);
+  if (!normalizedTypes.length) {
+    return true;
+  }
+
+  const rows = normalizedTypes.map((item) => ({
+    room_code: ROOM_CODE,
+    id: item.id,
+    name: item.name,
+    description: item.description || null,
+    updated_at: new Date().toISOString(),
+  }));
+
+  const { error: insertError } = await supabase.from("game_question_types").insert(rows);
+  if (insertError) {
+    return false;
+  }
+
+  return true;
+}
+
 async function refreshQuestionsFromSupabase() {
   const questions = await loadQuestionsFromSupabase();
   if (!questions) {
@@ -903,6 +974,23 @@ async function refreshQuestionsFromSupabase() {
   }
 
   state.questions = questions;
+  state.round.questionIndex = clampQuestionIndex(state.round.questionIndex);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  notifyOnly();
+  return true;
+}
+
+async function refreshQuestionTypesFromSupabase() {
+  const questionTypes = await loadQuestionTypesFromSupabase();
+  if (!questionTypes) {
+    return false;
+  }
+
+  state.questionTypes = questionTypes;
+  if (!state.questionTypes.some((item) => item.id === state.ui?.activeQuestionTypeId)) {
+    state.ui.activeQuestionTypeId = state.questionTypes[0]?.id || DEFAULT_QUESTION_TYPE_ID;
+  }
+  state.questions = normalizeQuestions(state.questions || [], state.questionTypes);
   state.round.questionIndex = clampQuestionIndex(state.round.questionIndex);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   notifyOnly();
@@ -936,6 +1024,21 @@ async function setupSupabase(defaultQuestions = []) {
   } else {
     setConnectionStatus("disconnected");
   }
+
+  const questionTypesFromTable = await loadQuestionTypesFromSupabase();
+  if (questionTypesFromTable && questionTypesFromTable.length) {
+    state.questionTypes = questionTypesFromTable;
+    if (!state.questionTypes.some((item) => item.id === state.ui?.activeQuestionTypeId)) {
+      state.ui.activeQuestionTypeId = state.questionTypes[0]?.id || DEFAULT_QUESTION_TYPE_ID;
+    }
+  } else {
+    const seededTypes = await replaceQuestionTypesInSupabaseWithRetry(state.questionTypes || []);
+    if (!seededTypes) {
+      pendingQuestionTypesSync = true;
+      setConnectionStatus("disconnected");
+    }
+  }
+  state.questions = normalizeQuestions(state.questions || [], state.questionTypes || []);
 
   const questionsFromTable = await loadQuestionsFromSupabase();
   if (questionsFromTable && questionsFromTable.length) {
@@ -1006,6 +1109,31 @@ async function setupSupabase(defaultQuestions = []) {
       });
   }
 
+  if (!questionTypesRealtimeChannel) {
+    questionTypesRealtimeChannel = supabase
+      .channel(`question-types-${ROOM_CODE}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "game_question_types",
+          filter: `room_code=eq.${ROOM_CODE}`,
+        },
+        async () => {
+          const refreshed = await refreshQuestionTypesFromSupabase();
+          if (!refreshed) {
+            setConnectionStatus("disconnected");
+          }
+        }
+      )
+      .subscribe((status) => {
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          setConnectionStatus("disconnected");
+        }
+      });
+  }
+
   startRoomStatePolling();
 }
 
@@ -1038,7 +1166,7 @@ async function dispatchAsync(action, payload = {}) {
     throw new Error("State no inicializado. Llama initializeState primero.");
   }
 
-  if (QUESTION_ACTIONS.has(action) && !supabaseEnabled) {
+  if ((QUESTION_ACTIONS.has(action) || QUESTION_TYPE_ACTIONS.has(action)) && !supabaseEnabled) {
     throw new Error("No hay conexión con Base de Datos. No se puede guardar preguntas en modo local.");
   }
 
@@ -1085,6 +1213,30 @@ async function dispatchAsync(action, payload = {}) {
     }
 
     pendingQuestionsSync = false;
+  }
+
+  if (QUESTION_TYPE_ACTIONS.has(action) && supabaseEnabled) {
+    const questionTypesSynced = await replaceQuestionTypesInSupabaseWithRetry(state.questionTypes || []);
+    if (!questionTypesSynced) {
+      pendingQuestionTypesSync = true;
+      setConnectionStatus("disconnected");
+      persistAndNotify(true);
+      throw new Error("No se pudo guardar tipos de preguntas en Base de Datos. Se reintentará automáticamente.");
+    }
+
+    pendingQuestionTypesSync = false;
+
+    if (action === "DELETE_QUESTION_TYPE") {
+      const questionsSyncedAfterTypeDelete = await replaceQuestionsInSupabaseWithRetry(state.questions || []);
+      if (!questionsSyncedAfterTypeDelete) {
+        pendingQuestionsSync = true;
+        setConnectionStatus("disconnected");
+        persistAndNotify(true);
+        throw new Error("No se pudieron actualizar preguntas después de eliminar el tipo. Se reintentará automáticamente.");
+      }
+
+      pendingQuestionsSync = false;
+    }
   }
 
   if (supabaseEnabled) {
