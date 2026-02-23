@@ -10,6 +10,8 @@ const captainStrikes = document.getElementById("captain-strikes");
 const captainBuzzButton = document.getElementById("captain-buzz");
 const teamBackModalEl = document.getElementById("team-back-modal");
 const teamBackAcceptButton = document.getElementById("team-back-accept");
+const strikeOverlayEl = document.getElementById("strike-overlay");
+const strikeOverlayImagesEl = document.getElementById("strike-overlay-images");
 const PLAYER_SESSION_KEY = "fm100_player_session";
 const TEAM_BACK_SEEN_KEY = "fm100_team_back_seen";
 const correctSound = new Audio("./assets/audio/correcto.mp3");
@@ -19,6 +21,55 @@ const triunfoSound = new Audio("./assets/audio/triunfo.mp3");
 let lastSoundEventVersion = null;
 let pendingSoundEvent = null;
 let audioUnlockConfigured = false;
+let strikeOverlayTimeoutId = null;
+let strikeSoundDurationMs = 1200;
+
+incorrectSound.addEventListener("loadedmetadata", () => {
+  const duration = Number(incorrectSound.duration);
+  if (Number.isFinite(duration) && duration > 0) {
+    strikeSoundDurationMs = Math.max(500, Math.round(duration * 1000));
+  }
+});
+
+function getStrikeOverlayCount(state) {
+  const strikesA = Number(state.teams?.A?.strikes) || 0;
+  const strikesB = Number(state.teams?.B?.strikes) || 0;
+  return Math.max(1, Math.min(3, Math.max(strikesA, strikesB)));
+}
+
+function renderStrikeOverlayImages(count) {
+  if (!strikeOverlayImagesEl) {
+    return;
+  }
+
+  strikeOverlayImagesEl.innerHTML = "";
+  for (let index = 0; index < count; index += 1) {
+    const image = document.createElement("img");
+    image.src = "./assets/images/X.png";
+    image.alt = "Strike";
+    image.className = "strike-overlay-image";
+    strikeOverlayImagesEl.appendChild(image);
+  }
+}
+
+function showStrikeOverlay(state) {
+  if (!strikeOverlayEl) {
+    return;
+  }
+
+  const count = getStrikeOverlayCount(state);
+  renderStrikeOverlayImages(count);
+  strikeOverlayEl.classList.remove("hidden");
+
+  if (strikeOverlayTimeoutId) {
+    clearTimeout(strikeOverlayTimeoutId);
+  }
+
+  strikeOverlayTimeoutId = window.setTimeout(() => {
+    strikeOverlayEl.classList.add("hidden");
+    strikeOverlayTimeoutId = null;
+  }, strikeSoundDurationMs);
+}
 
 function playSound(sound) {
   if (!sound) {
@@ -111,6 +162,10 @@ function handleGlobalSound(state) {
 
   if (version <= lastSoundEventVersion || !type) {
     return;
+  }
+
+  if (type === "incorrect") {
+    showStrikeOverlay(state);
   }
 
   tryPlaySoundEvent(type, version);

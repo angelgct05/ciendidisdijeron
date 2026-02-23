@@ -625,6 +625,30 @@ button:disabled {
   border-color: rgba(220, 38, 38, 0.55);
 }
 
+.strike-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  z-index: 40;
+}
+
+.strike-overlay-images {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  padding: 0.4rem 0.6rem;
+}
+
+.strike-overlay-image {
+  width: clamp(70px, 12vw, 140px);
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.28));
+}
+
 .admin {
   padding-top: 0.8rem;
 }
