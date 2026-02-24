@@ -89,3 +89,28 @@ El estado usa sincronización híbrida:
 - Haz recarga completa (`Ctrl+F5`) tras cambios de assets o audio.
 - Verifica en admin el estado “Base de Datos: conectado”.
 - Para evento en vivo: una pestaña para admin y otra para pantalla pública.
+
+## Migración a un proyecto nuevo de Supabase
+
+### Qué debes tomar en cuenta antes de migrar
+
+- Guarda respaldo del estado actual (`game_rooms`, `game_questions`, `game_question_types`).
+- Crea el nuevo proyecto y verifica que tenga Realtime habilitado.
+- Actualiza credenciales en [js/config.js](js/config.js):
+   - `SUPABASE_URL`
+   - `SUPABASE_ANON_KEY`
+   - `ROOM_CODE`
+- Ejecuta scripts en este orden:
+   1. [supabase/01_schema_full.sql](supabase/01_schema_full.sql) en proyecto nuevo.
+   2. [supabase/02_export_old_project.sql](supabase/02_export_old_project.sql) en proyecto viejo.
+   3. [supabase/03_import_new_project.sql](supabase/03_import_new_project.sql) en proyecto nuevo (pegando el JSON exportado).
+
+### Validación post-migración
+
+- Abre `admin.html` y confirma “Base de Datos: conectado”.
+- Verifica en `questions.html` que aparecen tipos/preguntas.
+- Prueba flujo mínimo:
+   - seleccionar capitán,
+   - bloquear buzzer,
+   - revelar respuesta,
+   - sumar puntos.
