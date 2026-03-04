@@ -34,6 +34,7 @@
           <p id="admin-team-control-badge-a" class="team-control-badge" aria-live="polite"></p>
           <h2 id="admin-team-name-a">Equipo A</h2>
           <input id="team-name-a-input" class="team-name-input" type="text" maxlength="24" placeholder="Nombre Equipo A" />
+          <button id="take-control-a" type="button">Tomar control</button>
           <p id="admin-score-a" class="score">0</p>
           <div class="score-adjust-controls">
             <button data-score-action="A:sub">Restar</button>
@@ -44,16 +45,21 @@
             <p>Strikes: <strong id="admin-strikes-a">0</strong></p>
           </div>
           <div class="team-members">
-            <label for="captain-select-a">Capitán</label>
-            <select id="captain-select-a" class="captain-select"></select>
+            <label for="captain-name-a">Capitán (visual)</label>
+            <input id="captain-name-a" class="captain-name-input" type="text" maxlength="32" placeholder="Nombre del capitán" />
             <h4>Integrantes</h4>
             <ul id="team-members-a" class="team-members-list"></ul>
+            <div class="manual-player-controls">
+              <input id="manual-player-name-a" type="text" maxlength="32" placeholder="Agregar jugador manual" />
+              <button id="add-manual-player-a" type="button">Agregar</button>
+            </div>
           </div>
         </article>
         <article class="team team-b">
           <p id="admin-team-control-badge-b" class="team-control-badge" aria-live="polite"></p>
           <h2 id="admin-team-name-b">Equipo B</h2>
           <input id="team-name-b-input" class="team-name-input" type="text" maxlength="24" placeholder="Nombre Equipo B" />
+          <button id="take-control-b" type="button">Tomar control</button>
           <p id="admin-score-b" class="score">0</p>
           <div class="score-adjust-controls">
             <button data-score-action="B:sub">Restar</button>
@@ -64,10 +70,14 @@
             <p>Strikes: <strong id="admin-strikes-b">0</strong></p>
           </div>
           <div class="team-members">
-            <label for="captain-select-b">Capitán</label>
-            <select id="captain-select-b" class="captain-select"></select>
+            <label for="captain-name-b">Capitán (visual)</label>
+            <input id="captain-name-b" class="captain-name-input" type="text" maxlength="32" placeholder="Nombre del capitán" />
             <h4>Integrantes</h4>
             <ul id="team-members-b" class="team-members-list"></ul>
+            <div class="manual-player-controls">
+              <input id="manual-player-name-b" type="text" maxlength="32" placeholder="Agregar jugador manual" />
+              <button id="add-manual-player-b" type="button">Agregar</button>
+            </div>
           </div>
         </article>
       </section>

@@ -43,7 +43,6 @@ const STRIKE_OVERLAY_MIN_MS = 600;
 const STRIKE_OVERLAY_MAX_MS = 2500;
 
 let playerRegistered = false;
-let redirectingToCaptain = false;
 let lastSoundEventVersion = null;
 let pendingSoundEvent = null;
 let audioUnlockConfigured = false;
@@ -430,7 +429,6 @@ function render(state) {
   qrModalEl.classList.toggle("hidden", !state.ui?.showQr);
   enforcePlayerSession(state);
   renderTeamBackModal(state);
-  maybeRedirectCaptain(state);
 
   if (!question) {
     if (playableQuestions.length && state.round.questionIndex < 0) {
@@ -468,27 +466,6 @@ function renderTeamBackModal(state) {
   const seen = getSeenTeamBackVersion();
   teamBackModalEl.dataset.version = String(version);
   teamBackModalEl.classList.toggle("hidden", seen >= version);
-}
-
-function maybeRedirectCaptain(state) {
-  if (redirectingToCaptain) {
-    return;
-  }
-
-  if (isAdminSession()) {
-    return;
-  }
-
-  const session = loadPlayerSession();
-  if (!session) {
-    return;
-  }
-
-  const captainId = state.round?.captains?.[session.team] || null;
-  if (captainId && captainId === session.id) {
-    redirectingToCaptain = true;
-    window.location.replace(`./captain.html?team=${session.team}`);
-  }
 }
 
 function enforcePlayerSession(state) {

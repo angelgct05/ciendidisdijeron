@@ -6,7 +6,6 @@ Aplicación web estática para dinámica tipo “100 Mexicanos Dijeron”, con c
 
 - `admin.html`: panel de conducción del juego (PIN admin).
 - `index.html`: pantalla principal para mostrar pregunta, respuestas y marcador.
-- `captain.html`: botón buzzer del capitán asignado.
 - `questions.html`: CRUD de tipos de pregunta y banco de preguntas/respuestas.
 - `instructions.html`: guía para jugadores.
 
@@ -15,14 +14,13 @@ Aplicación web estática para dinámica tipo “100 Mexicanos Dijeron”, con c
 1. Abre `admin.html`.
 2. Ingresa PIN admin: `2026`.
 3. Abre `index.html` en otra pestaña/dispositivo para mostrar el tablero.
-4. Opcional: abre `captain.html?team=A` o `captain.html?team=B` para capitán.
-5. Configura tipo de partida, multiplicador y capitanes.
-6. Inicia con `Siguiente Pregunta`.
+4. Configura tipo de partida, multiplicador y capitán visual por texto.
+5. Inicia con `Siguiente Pregunta`.
 
 ## Reglas de juego implementadas
 
 - Dos equipos compiten por adivinar respuestas populares.
-- El buzzer define el equipo con control de ronda.
+- El control de ronda se define desde Admin con `Tomar control` (Equipo A o B).
 - `Mostrar/Ocultar` respuestas solo está habilitado cuando existe control de ronda.
 - `Agregar Strike` aplica al equipo con control.
 - Cierre de ronda:
@@ -35,7 +33,7 @@ Aplicación web estática para dinámica tipo “100 Mexicanos Dijeron”, con c
 
 Se sincronizan entre pantallas conectadas:
 
-- `assets/audio/button.mp3`: buzzer del capitán.
+- `assets/audio/button.mp3`: asignación de control desde Admin (`Tomar control`).
 - `assets/audio/correcto.mp3`: respuesta revelada.
 - `assets/audio/incorrecto.mp3`: strike.
 - `assets/audio/a_jugar.mp3`: siguiente pregunta.
@@ -110,7 +108,12 @@ El estado usa sincronización híbrida:
 - Abre `admin.html` y confirma “Base de Datos: conectado”.
 - Verifica en `questions.html` que aparecen tipos/preguntas.
 - Prueba flujo mínimo:
-   - seleccionar capitán,
-   - bloquear buzzer,
+   - seleccionar equipo con `Tomar control`,
    - revelar respuesta,
    - sumar puntos.
+
+### Migración para instalaciones existentes (sin reiniciar proyecto)
+
+- Si tu proyecto ya tenía buzzer por RPC, ejecuta también:
+  - [supabase/05_remove_buzzer_rpc.sql](supabase/05_remove_buzzer_rpc.sql)
+- Esta migración elimina la función `try_lock_buzzer` que ya no se utiliza en el flujo actual.

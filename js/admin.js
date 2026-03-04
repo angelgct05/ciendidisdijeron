@@ -16,12 +16,18 @@ const adminTeamControlBadgeA = document.getElementById("admin-team-control-badge
 const adminTeamControlBadgeB = document.getElementById("admin-team-control-badge-b");
 const teamNameInputA = document.getElementById("team-name-a-input");
 const teamNameInputB = document.getElementById("team-name-b-input");
+const takeControlAButton = document.getElementById("take-control-a");
+const takeControlBButton = document.getElementById("take-control-b");
 const adminScoreA = document.getElementById("admin-score-a");
 const adminScoreB = document.getElementById("admin-score-b");
 const adminStrikesA = document.getElementById("admin-strikes-a");
 const adminStrikesB = document.getElementById("admin-strikes-b");
-const captainSelectA = document.getElementById("captain-select-a");
-const captainSelectB = document.getElementById("captain-select-b");
+const captainNameInputA = document.getElementById("captain-name-a");
+const captainNameInputB = document.getElementById("captain-name-b");
+const manualPlayerNameInputA = document.getElementById("manual-player-name-a");
+const manualPlayerNameInputB = document.getElementById("manual-player-name-b");
+const addManualPlayerAButton = document.getElementById("add-manual-player-a");
+const addManualPlayerBButton = document.getElementById("add-manual-player-b");
 const scoreDeltaInputA = document.getElementById("score-delta-a");
 const scoreDeltaInputB = document.getElementById("score-delta-b");
 const teamMembersA = document.getElementById("team-members-a");
@@ -380,7 +386,7 @@ function syncInputValue(input, value) {
   }
 }
 
-function renderTeamMembers(state, team, container) {
+function renderTeamMembers(state, team, container, captainInput) {
   const players = (state.players || []).filter((player) => player.active && player.team === team);
   container.innerHTML = "";
 
@@ -393,44 +399,53 @@ function renderTeamMembers(state, team, container) {
   }
 
   players.forEach((player) => {
+    const isManual = player.source === "manual";
     const item = document.createElement("li");
     item.className = "team-member-item";
     item.innerHTML = `
-      <span>${player.name}</span>
+      <span class="team-member-name">${player.name}</span>
       <div class="team-member-actions">
-        <button type="button" class="question-action-btn" data-player-logout="${player.id}">Cerrar sesión</button>
+        <button type="button" class="question-action-btn" data-captain-copy="${player.id}">Copiar a capitán</button>
+        ${isManual
+    ? `<button type="button" class="question-action-btn" data-player-edit="${player.id}">Editar</button>
+             <button type="button" class="question-action-btn danger" data-player-delete="${player.id}">Eliminar</button>`
+    : `<button type="button" class="question-action-btn" data-player-logout="${player.id}">Cerrar sesión</button>`}
       </div>
     `;
 
-    const logoutButton = item.querySelector("[data-player-logout]");
-    logoutButton.addEventListener("click", () => {
-      dispatch("LOGOUT_PLAYER", { id: player.id });
+    const copyCaptainButton = item.querySelector("[data-captain-copy]");
+    copyCaptainButton.addEventListener("click", () => {
+      captainInput.value = player.name;
+      dispatch("SET_ROUND_CAPTAIN", { team, name: player.name });
     });
+
+    const editButton = item.querySelector("[data-player-edit]");
+    if (editButton) {
+      editButton.addEventListener("click", () => {
+        const nextName = window.prompt("Editar nombre del jugador", player.name);
+        if (nextName === null) {
+          return;
+        }
+
+        dispatch("EDIT_MANUAL_PLAYER", { id: player.id, name: nextName });
+      });
+    }
+
+    const deleteButton = item.querySelector("[data-player-delete]");
+    if (deleteButton) {
+      deleteButton.addEventListener("click", () => {
+        dispatch("DELETE_MANUAL_PLAYER", { id: player.id });
+      });
+    }
+
+    const logoutButton = item.querySelector("[data-player-logout]");
+    if (logoutButton) {
+      logoutButton.addEventListener("click", () => {
+        dispatch("LOGOUT_PLAYER", { id: player.id });
+      });
+    }
 
     container.appendChild(item);
-  });
-}
-
-function renderCaptainSelect(state, team, selectEl) {
-  const players = (state.players || []).filter((player) => player.active && player.team === team);
-  const currentCaptainId = state.round?.captains?.[team] || "";
-  runWithSelectSync(() => {
-    selectEl.innerHTML = "";
-
-    const noneOption = document.createElement("option");
-    noneOption.value = "";
-    noneOption.textContent = "No hay capitán";
-    selectEl.appendChild(noneOption);
-
-    players.forEach((player) => {
-      const option = document.createElement("option");
-      option.value = player.id;
-      option.textContent = player.name;
-      selectEl.appendChild(option);
-    });
-
-    const validCaptain = players.some((player) => player.id === currentCaptainId);
-    selectEl.value = validCaptain ? currentCaptainId : "";
   });
 }
 
@@ -477,10 +492,10 @@ function render(state) {
   adminScoreB.textContent = state.teams.B.score;
   adminStrikesA.textContent = String(state.teams.A.strikes || 0);
   adminStrikesB.textContent = String(state.teams.B.strikes || 0);
-  renderTeamMembers(state, "A", teamMembersA);
-  renderTeamMembers(state, "B", teamMembersB);
-  renderCaptainSelect(state, "A", captainSelectA);
-  renderCaptainSelect(state, "B", captainSelectB);
+  renderTeamMembers(state, "A", teamMembersA, captainNameInputA);
+  renderTeamMembers(state, "B", teamMembersB, captainNameInputB);
+  syncInputValue(captainNameInputA, state.round?.captains?.A || "");
+  syncInputValue(captainNameInputB, state.round?.captains?.B || "");
   renderQuestionTypeSelect(state);
   toggleQrButton.textContent = state.ui?.showQr ? "Ocultar QR" : "Mostrar QR";
   const controlTeam = state.round.buzzerWinner;
@@ -494,6 +509,8 @@ function render(state) {
     adminTeamControlBadgeB.classList.remove("active");
   }
   clearRoundControlButton.disabled = !(controlTeam === "A" || controlTeam === "B");
+  takeControlAButton.disabled = controlTeam === "A";
+  takeControlBButton.disabled = controlTeam === "B";
 
   const revealedPoints = getRevealedPointsTotal(state);
   const multiplier = [1, 2, 3].includes(Number(state.round.pointsMultiplier)) ? Number(state.round.pointsMultiplier) : 1;
@@ -581,6 +598,12 @@ function attachEvents() {
   toggleQrButton.addEventListener("click", () => {
     const state = getState();
     dispatch("TOGGLE_QR", { value: !state.ui?.showQr });
+  });
+  takeControlAButton.addEventListener("click", () => {
+    dispatch("FORCE_ROUND_CONTROL", { team: "A" });
+  });
+  takeControlBButton.addEventListener("click", () => {
+    dispatch("FORCE_ROUND_CONTROL", { team: "B" });
   });
   clearRoundControlButton.addEventListener("click", () => {
     dispatch("CLEAR_ROUND_CONTROL");
@@ -700,24 +723,30 @@ function attachEvents() {
     dispatch("SET_TEAM_NAME", { team, name: input.value });
   };
 
+  const updateCaptainName = (team, input) => {
+    dispatch("SET_ROUND_CAPTAIN", { team, name: input.value });
+  };
+
+  const addManualPlayer = (team, input) => {
+    const name = String(input.value || "").trim();
+    if (!name) {
+      return;
+    }
+
+    dispatch("ADD_MANUAL_PLAYER", { team, name });
+    input.value = "";
+  };
+
   teamNameInputA.addEventListener("change", () => updateTeamName("A", teamNameInputA));
   teamNameInputB.addEventListener("change", () => updateTeamName("B", teamNameInputB));
   teamNameInputA.addEventListener("blur", () => updateTeamName("A", teamNameInputA));
   teamNameInputB.addEventListener("blur", () => updateTeamName("B", teamNameInputB));
-  captainSelectA.addEventListener("change", (event) => {
-    if (!isUserSelectChange(event)) {
-      return;
-    }
-
-    dispatch("SET_ROUND_CAPTAIN", { team: "A", playerId: captainSelectA.value || null });
-  });
-  captainSelectB.addEventListener("change", (event) => {
-    if (!isUserSelectChange(event)) {
-      return;
-    }
-
-    dispatch("SET_ROUND_CAPTAIN", { team: "B", playerId: captainSelectB.value || null });
-  });
+  captainNameInputA.addEventListener("change", () => updateCaptainName("A", captainNameInputA));
+  captainNameInputB.addEventListener("change", () => updateCaptainName("B", captainNameInputB));
+  captainNameInputA.addEventListener("blur", () => updateCaptainName("A", captainNameInputA));
+  captainNameInputB.addEventListener("blur", () => updateCaptainName("B", captainNameInputB));
+  addManualPlayerAButton.addEventListener("click", () => addManualPlayer("A", manualPlayerNameInputA));
+  addManualPlayerBButton.addEventListener("click", () => addManualPlayer("B", manualPlayerNameInputB));
 
   [
     [teamNameInputA, "A"],
@@ -728,6 +757,31 @@ function attachEvents() {
         event.preventDefault();
         updateTeamName(team, input);
         input.blur();
+      }
+    });
+  });
+
+  [
+    [captainNameInputA, "A"],
+    [captainNameInputB, "B"],
+  ].forEach(([input, team]) => {
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        updateCaptainName(team, input);
+        input.blur();
+      }
+    });
+  });
+
+  [
+    [manualPlayerNameInputA, "A"],
+    [manualPlayerNameInputB, "B"],
+  ].forEach(([input, team]) => {
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        addManualPlayer(team, input);
       }
     });
   });

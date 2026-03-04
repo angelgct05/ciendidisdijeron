@@ -12,17 +12,7 @@ select 'table_exists:game_rooms' as check_name,
 union all
 select 'table_exists:game_questions', to_regclass('public.game_questions') is not null
 union all
-select 'table_exists:game_question_types', to_regclass('public.game_question_types') is not null
-union all
-select 'function_exists:try_lock_buzzer(text,text)',
-       exists (
-         select 1
-         from pg_proc p
-         join pg_namespace n on n.oid = p.pronamespace
-         where n.nspname = 'public'
-           and p.proname = 'try_lock_buzzer'
-           and pg_get_function_identity_arguments(p.oid) = 'p_room text, p_team text'
-       );
+select 'table_exists:game_question_types', to_regclass('public.game_question_types') is not null;
 
 -- ==============================
 -- 2) Conteos de datos migrados
@@ -110,9 +100,4 @@ from public.game_questions
 where jsonb_typeof(answers) is distinct from 'array'
 order by room_code, position;
 
--- ==============================
--- 7) Smoke test RPC (sin modificar datos)
--- ==============================
--- Nota: usa room inexistente para evitar side effects
-select *
-from public.try_lock_buzzer('__NON_EXISTING_ROOM__', 'A');
+-- Sin smoke test RPC: flujo de control de ronda ahora se gestiona desde estado en game_rooms.

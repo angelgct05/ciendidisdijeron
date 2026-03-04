@@ -132,6 +132,7 @@ function normalizePlayers(players) {
         name,
         team,
         active: player?.active !== false,
+        source: player?.source === "manual" ? "manual" : "session",
       };
     })
     .filter(Boolean);
@@ -232,8 +233,8 @@ function validateState(nextState, fallbackQuestions = []) {
         : 1,
       actionsLocked: Boolean(nextState.round?.actionsLocked),
       captains: {
-        A: typeof nextState.round?.captains?.A === "string" ? nextState.round.captains.A : null,
-        B: typeof nextState.round?.captains?.B === "string" ? nextState.round.captains.B : null,
+        A: typeof nextState.round?.captains?.A === "string" ? nextState.round.captains.A.trim().slice(0, 32) : null,
+        B: typeof nextState.round?.captains?.B === "string" ? nextState.round.captains.B.trim().slice(0, 32) : null,
       },
     },
     players: normalizePlayers(nextState.players),
@@ -415,13 +416,14 @@ function applyActionLocal(action, payload = {}) {
       break;
     }
     case "LOCK_BUZZ": {
-      if (state.round.status === "buzz-open" && !state.round.buzzerWinner) {
-        if (payload.team === "A" || payload.team === "B") {
-          state.round.buzzerWinner = payload.team;
-          state.round.status = "locked";
-          state.round.actionsLocked = false;
-          emitSoundEvent("button");
-        }
+      break;
+    }
+    case "FORCE_ROUND_CONTROL": {
+      if (payload.team === "A" || payload.team === "B") {
+        state.round.buzzerWinner = payload.team;
+        state.round.status = "locked";
+        state.round.actionsLocked = false;
+        emitSoundEvent("button");
       }
       break;
     }
@@ -524,7 +526,8 @@ function applyActionLocal(action, payload = {}) {
       }
 
       const existingIndex = state.players.findIndex((player) => player.id === id);
-      const nextPlayer = { id, team, name, active: true };
+      const source = payload.source === "manual" ? "manual" : "session";
+      const nextPlayer = { id, team, name, active: true, source };
 
       if (existingIndex >= 0) {
         state.players[existingIndex] = nextPlayer;
@@ -535,8 +538,14 @@ function applyActionLocal(action, payload = {}) {
     }
     case "SET_ROUND_CAPTAIN": {
       const team = payload.team;
+      const directName = String(payload.name || "").trim().slice(0, 32);
       const playerId = String(payload.playerId || "").trim();
       if (team !== "A" && team !== "B") {
+        break;
+      }
+
+      if (directName) {
+        state.round.captains[team] = directName;
         break;
       }
 
@@ -550,7 +559,65 @@ function applyActionLocal(action, payload = {}) {
         break;
       }
 
-      state.round.captains[team] = playerId;
+      state.round.captains[team] = player.name;
+      break;
+    }
+    case "ADD_MANUAL_PLAYER": {
+      const team = payload.team;
+      const name = String(payload.name || "").trim().slice(0, 32);
+      if ((team !== "A" && team !== "B") || !name) {
+        break;
+      }
+
+      const id = `manual-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      state.players.push({ id, team, name, active: true, source: "manual" });
+      break;
+    }
+    case "EDIT_MANUAL_PLAYER": {
+      const id = String(payload.id || "").trim();
+      const name = String(payload.name || "").trim().slice(0, 32);
+      if (!id || !name) {
+        break;
+      }
+
+      const player = state.players.find((item) => item.id === id && item.source === "manual");
+      if (!player) {
+        break;
+      }
+
+      const previousName = player.name;
+      player.name = name;
+
+      if (state.round.captains.A === previousName) {
+        state.round.captains.A = name;
+      }
+
+      if (state.round.captains.B === previousName) {
+        state.round.captains.B = name;
+      }
+      break;
+    }
+    case "DELETE_MANUAL_PLAYER": {
+      const id = String(payload.id || "").trim();
+      if (!id) {
+        break;
+      }
+
+      const player = state.players.find((item) => item.id === id && item.source === "manual");
+      if (!player) {
+        break;
+      }
+
+      const deletedName = player.name;
+      state.players = state.players.filter((item) => item.id !== id);
+
+      if (state.round.captains.A === deletedName) {
+        state.round.captains.A = null;
+      }
+
+      if (state.round.captains.B === deletedName) {
+        state.round.captains.B = null;
+      }
       break;
     }
     case "SET_ROUND_MULTIPLIER": {
@@ -573,26 +640,30 @@ function applyActionLocal(action, payload = {}) {
           return player;
         }
 
+        if (player.source === "manual") {
+          return null;
+        }
+
         return {
           ...player,
           active: false,
         };
-      });
-
-      if (state.round.captains.A === id) {
-        state.round.captains.A = null;
-      }
-
-      if (state.round.captains.B === id) {
-        state.round.captains.B = null;
-      }
+      }).filter(Boolean);
       break;
     }
     case "LOGOUT_ALL_PLAYERS": {
-      state.players = state.players.map((player) => ({
-        ...player,
-        active: false,
-      }));
+      state.players = state.players
+        .map((player) => {
+          if (player.source === "manual") {
+            return null;
+          }
+
+          return {
+            ...player,
+            active: false,
+          };
+        })
+        .filter(Boolean);
       state.round.captains.A = null;
       state.round.captains.B = null;
       state.ui.logoutAllVersion = (Number(state.ui.logoutAllVersion) || 0) + 1;
@@ -1207,39 +1278,8 @@ async function dispatchAsync(action, payload = {}) {
     throw new Error("No hay conexión con Base de Datos. No se puede guardar preguntas en modo local.");
   }
 
-  if (supabaseEnabled && action === "LOCK_BUZZ") {
-    const previousVersion = Number(state.stateVersion) || 0;
-    const hadWinnerBefore = state.round?.buzzerWinner === "A" || state.round?.buzzerWinner === "B";
-    const team = payload.team;
-    if (team !== "A" && team !== "B") {
-      return getState();
-    }
-
-    const { data, error } = await supabase.rpc("try_lock_buzzer", {
-      p_room: ROOM_CODE,
-      p_team: team,
-    });
-
-    if (!error && Array.isArray(data) && data.length) {
-      const result = data[0];
-      if (result?.state) {
-        state = validateState(result.state, state.questions || []);
-        const hasWinnerNow = state.round?.buzzerWinner === "A" || state.round?.buzzerWinner === "B";
-        const shouldEmitButton = !hadWinnerBefore && hasWinnerNow;
-        if (shouldEmitButton) {
-          emitSoundEvent("button");
-        }
-
-        if ((Number(state.stateVersion) || 0) <= previousVersion || shouldEmitButton) {
-          state.stateVersion = Math.max(previousVersion + 1, Number(state.stateVersion) || 0);
-          await upsertRoomState(state);
-        }
-        persistAndNotify(true);
-      }
-      return getState();
-    }
-
-    setConnectionStatus("disconnected");
+  if (action === "LOCK_BUZZ") {
+    return getState();
   }
 
   const previousState = clone(state);
