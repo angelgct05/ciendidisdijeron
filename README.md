@@ -14,26 +14,29 @@ Aplicación web estática para dinámica tipo “100 Mexicanos Dijeron”, con c
 1. Abre `admin.html`.
 2. Ingresa PIN admin: `2026`.
 3. Abre `index.html` en otra pestaña/dispositivo para mostrar el tablero.
-4. Configura tipo de partida, multiplicador y capitán visual por texto.
+4. Configura puntuación para ganar, tipo de partida, multiplicador y capitán por texto.
 5. Inicia con `Siguiente Pregunta`.
 
 ## Reglas de juego implementadas
 
 - Dos equipos compiten por adivinar respuestas populares.
-- El control de ronda se define desde Admin con `Tomar control` (Equipo A o B).
+- El control de ronda se define desde Admin con `Dar el control` (Equipo A o B).
 - `Mostrar/Ocultar` respuestas solo está habilitado cuando existe control de ronda.
-- `Agregar Strike` aplica al equipo con control.
+- `Agregar Strike` aplica al equipo con control y tiene tope de `3`.
+- `Robo de Puntos` solo se habilita cuando algún equipo llega a `3` strikes.
 - Cierre de ronda:
-   - `Termina Ronda`: suma al equipo con control.
+   - `Sumar Respuestas`: suma al equipo con control.
    - `Robo de Puntos`: suma al equipo contrario.
-- Al cerrar ronda, `Termina Ronda`, `Robo de Puntos` y `Agregar Strike` quedan bloqueados hasta reabrir una nueva ronda/control.
-- Al llegar a `500` puntos, se dispara modal de ganador y felicitación.
+- Al cerrar ronda con `Sumar Respuestas` o `Robo de Puntos`, la ronda se reinicia automáticamente.
+- El selector de puntuación para ganar (`250/500/750/1000`) se bloquea al iniciar la pregunta 1 y solo se desbloquea al reiniciar partida.
+- Multiplicador y tipo de partida también se bloquean al iniciar la pregunta 1.
+- `Terminar Partida` declara ganador al equipo con mayor puntaje.
 
 ## Sonidos globales
 
 Se sincronizan entre pantallas conectadas:
 
-- `assets/audio/button.mp3`: asignación de control desde Admin (`Tomar control`).
+- `assets/audio/button.mp3`: asignación de control desde Admin (`Dar el control`).
 - `assets/audio/correcto.mp3`: respuesta revelada.
 - `assets/audio/incorrecto.mp3`: strike.
 - `assets/audio/a_jugar.mp3`: siguiente pregunta.
@@ -108,12 +111,15 @@ El estado usa sincronización híbrida:
 - Abre `admin.html` y confirma “Base de Datos: conectado”.
 - Verifica en `questions.html` que aparecen tipos/preguntas.
 - Prueba flujo mínimo:
-   - seleccionar equipo con `Tomar control`,
+   - seleccionar equipo con `Dar el control`,
    - revelar respuesta,
-   - sumar puntos.
+   - sumar puntos,
+   - verificar que `Robo de Puntos` se habilite al llegar a 3 strikes,
+   - verificar que la meta de puntaje elegida dispare ganador.
 
 ### Migración para instalaciones existentes (sin reiniciar proyecto)
 
 - Si tu proyecto ya tenía buzzer por RPC, ejecuta también:
   - [supabase/05_remove_buzzer_rpc.sql](supabase/05_remove_buzzer_rpc.sql)
 - Esta migración elimina la función `try_lock_buzzer` que ya no se utiliza en el flujo actual.
+- La puntuación para ganar vive en `state.ui.winningScore` dentro de `game_rooms.state`, no requiere cambios de esquema SQL.

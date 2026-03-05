@@ -100,4 +100,10 @@ from public.game_questions
 where jsonb_typeof(answers) is distinct from 'array'
 order by room_code, position;
 
+-- Meta de puntos configurada en estado (si no existe en una sala, la app usa 500 por defecto)
+select room_code,
+       coalesce((state #>> '{ui,winningScore}')::integer, 500) as winning_score
+from public.game_rooms
+order by room_code;
+
 -- Sin smoke test RPC: flujo de control de ronda ahora se gestiona desde estado en game_rooms.

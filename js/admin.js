@@ -38,12 +38,14 @@ const awardRevealedPointsButton = document.getElementById("award-revealed-points
 const stealRevealedPointsButton = document.getElementById("steal-revealed-points");
 const addStrikeControlButton = document.getElementById("add-strike-control");
 const logoutAllPlayersButton = document.getElementById("logout-all-players");
+const winningScoreSelect = document.getElementById("winning-score-select");
 const roundMultiplierSelect = document.getElementById("round-multiplier-select");
 const gameQuestionTypeSelect = document.getElementById("game-question-type-select");
 const resetRoundButton = document.getElementById("reset-round");
 const nextQuestionButton = document.getElementById("next-question");
 const prevQuestionButton = document.getElementById("prev-question");
 const resetGameButton = document.getElementById("reset-game");
+const finishGameButton = document.getElementById("finish-game");
 const adminSupabaseStatus = document.getElementById("admin-supabase-status");
 const adminBuzzerStatus = document.getElementById("admin-buzzer-status");
 const adminRoundLabel = document.getElementById("admin-round-label");
@@ -151,7 +153,11 @@ function renderWinnerMembers(state, team) {
 
 function openWinnerModal(state, team) {
   const teamName = state.teams?.[team]?.name || `Equipo ${team}`;
-  winnerMessage.textContent = `¡${teamName} llegó a 500 puntos y ganó la partida!`;
+  const winningScore = Number(state.ui?.winningScore || 500);
+  const teamScore = Number(state.teams?.[team]?.score || 0);
+  winnerMessage.textContent = teamScore >= winningScore
+    ? `¡${teamName} alcanzó la meta de ${winningScore} puntos y ganó la partida!`
+    : `¡${teamName} ganó la partida por cierre final con ${teamScore} puntos!`;
   renderWinnerMembers(state, team);
   winnerModal.classList.remove("hidden");
   playSound(championsSound);
@@ -159,7 +165,8 @@ function openWinnerModal(state, team) {
 
 function waitForSoundsAndCelebrate(state) {
   const winnerFromState = state.ui?.winnerTeam;
-  const winnerFromScores = Number(state.teams?.A?.score || 0) >= 500 ? "A" : (Number(state.teams?.B?.score || 0) >= 500 ? "B" : null);
+  const winningScore = Number(state.ui?.winningScore || 500);
+  const winnerFromScores = Number(state.teams?.A?.score || 0) >= winningScore ? "A" : (Number(state.teams?.B?.score || 0) >= winningScore ? "B" : null);
   const winnerTeam = winnerFromState === "A" || winnerFromState === "B" ? winnerFromState : winnerFromScores;
   if (winnerTeam !== "A" && winnerTeam !== "B") {
     return;
@@ -187,7 +194,8 @@ function waitForSoundsAndCelebrate(state) {
 
   const latest = getState();
   const latestWinnerFromState = latest.ui?.winnerTeam;
-  const latestWinnerFromScores = Number(latest.teams?.A?.score || 0) >= 500 ? "A" : (Number(latest.teams?.B?.score || 0) >= 500 ? "B" : null);
+  const latestWinningScore = Number(latest.ui?.winningScore || 500);
+  const latestWinnerFromScores = Number(latest.teams?.A?.score || 0) >= latestWinningScore ? "A" : (Number(latest.teams?.B?.score || 0) >= latestWinningScore ? "B" : null);
   const latestWinnerTeam = latestWinnerFromState === "A" || latestWinnerFromState === "B" ? latestWinnerFromState : latestWinnerFromScores;
   if (latestWinnerTeam !== winnerTeam) {
     pendingWinnerToken = null;
@@ -309,7 +317,6 @@ function renderAdminAnswers(state) {
     if (!hasControl) {
       toggleButton.disabled = true;
       toggleButton.classList.add("answer-toggle-locked");
-      toggleButton.textContent = "Bloqueado";
       toggleButton.title = "Debes asignar control de ronda para mostrar/ocultar respuestas.";
     }
 
@@ -496,6 +503,12 @@ function render(state) {
   renderTeamMembers(state, "B", teamMembersB, captainNameInputB);
   syncInputValue(captainNameInputA, state.round?.captains?.A || "");
   syncInputValue(captainNameInputB, state.round?.captains?.B || "");
+  const winningScore = Number(state.ui?.winningScore || 500);
+  if (document.activeElement !== winningScoreSelect) {
+    runWithSelectSync(() => {
+      winningScoreSelect.value = String(winningScore);
+    });
+  }
   renderQuestionTypeSelect(state);
   toggleQrButton.textContent = state.ui?.showQr ? "Ocultar QR" : "Mostrar QR";
   const controlTeam = state.round.buzzerWinner;
@@ -513,16 +526,22 @@ function render(state) {
   takeControlBButton.disabled = controlTeam === "B";
 
   const revealedPoints = getRevealedPointsTotal(state);
+  const roundStarted = Number(state.round?.questionIndex) >= 0;
   const multiplier = [1, 2, 3].includes(Number(state.round.pointsMultiplier)) ? Number(state.round.pointsMultiplier) : 1;
   if (document.activeElement !== roundMultiplierSelect) {
     runWithSelectSync(() => {
       roundMultiplierSelect.value = String(multiplier);
     });
   }
+  winningScoreSelect.disabled = roundStarted;
+  roundMultiplierSelect.disabled = roundStarted;
+  gameQuestionTypeSelect.disabled = roundStarted;
   const actionsLocked = Boolean(state.round?.actionsLocked);
+  const controlTeamStrikes = controlTeam === "A" || controlTeam === "B" ? Number(state.teams?.[controlTeam]?.strikes || 0) : 0;
+  const hasTeamWithThreeStrikes = Number(state.teams?.A?.strikes || 0) >= 3 || Number(state.teams?.B?.strikes || 0) >= 3;
   awardRevealedPointsButton.disabled = !(controlTeam === "A" || controlTeam === "B") || revealedPoints <= 0 || actionsLocked;
-  stealRevealedPointsButton.disabled = !(controlTeam === "A" || controlTeam === "B") || revealedPoints <= 0 || actionsLocked;
-  addStrikeControlButton.disabled = !(controlTeam === "A" || controlTeam === "B") || actionsLocked;
+  stealRevealedPointsButton.disabled = !(controlTeam === "A" || controlTeam === "B") || revealedPoints <= 0 || actionsLocked || !hasTeamWithThreeStrikes;
+  addStrikeControlButton.disabled = !(controlTeam === "A" || controlTeam === "B") || actionsLocked || controlTeamStrikes >= 3;
   prevQuestionButton.disabled = state.round.questionIndex <= 0;
   nextQuestionButton.disabled = state.round.questionIndex >= playableQuestions.length - 1;
 
@@ -631,6 +650,7 @@ function attachEvents() {
     const multiplier = [1, 2, 3].includes(Number(state.round.pointsMultiplier)) ? Number(state.round.pointsMultiplier) : 1;
 
     await dispatch("ADD_SCORE", { team: controlTeam, points: points * multiplier, playTriumph: true, lockRoundActions: true });
+    await dispatch("RESET_ROUND");
   });
   stealRevealedPointsButton.addEventListener("click", async () => {
     const state = getState();
@@ -648,6 +668,19 @@ function attachEvents() {
     const multiplier = [1, 2, 3].includes(Number(state.round.pointsMultiplier)) ? Number(state.round.pointsMultiplier) : 1;
 
     await dispatch("ADD_SCORE", { team: targetTeam, points: points * multiplier, playTriumph: true, lockRoundActions: true });
+    await dispatch("RESET_ROUND");
+  });
+  winningScoreSelect.addEventListener("change", (event) => {
+    if (!isUserSelectChange(event) || Number(getState().round?.questionIndex) >= 0) {
+      return;
+    }
+
+    const value = Number(winningScoreSelect.value);
+    if (![250, 500, 750, 1000].includes(value)) {
+      return;
+    }
+
+    dispatch("SET_WINNING_SCORE", { value });
   });
   roundMultiplierSelect.addEventListener("change", (event) => {
     if (!isUserSelectChange(event)) {
@@ -666,6 +699,10 @@ function attachEvents() {
       return;
     }
 
+    if (Number(getState().round?.questionIndex) >= 0) {
+      return;
+    }
+
     if (!gameQuestionTypeSelect.value) {
       return;
     }
@@ -673,7 +710,7 @@ function attachEvents() {
     dispatch("SET_ACTIVE_QUESTION_TYPE", { id: gameQuestionTypeSelect.value });
   });
   logoutAllPlayersButton.addEventListener("click", () => {
-    openConfirmModal("¿Seguro que deseas cerrar la sesión de todos los jugadores?", () => dispatch("LOGOUT_ALL_PLAYERS"));
+    openConfirmModal("¿Seguro que deseas expulsar a todos los jugadores?", () => dispatch("LOGOUT_ALL_PLAYERS"));
   });
   resetRoundButton.addEventListener("click", () => {
     openConfirmModal("¿Seguro que deseas resetear la ronda actual?", () => dispatch("RESET_ROUND"));
@@ -682,6 +719,19 @@ function attachEvents() {
   prevQuestionButton.addEventListener("click", () => dispatch("PREV_QUESTION"));
   resetGameButton.addEventListener("click", () => {
     openConfirmModal("¿Seguro que deseas resetear toda la partida?", () => dispatch("RESET_GAME"));
+  });
+  finishGameButton.addEventListener("click", () => {
+    openConfirmModal("¿Seguro que deseas terminar la partida y declarar ganador al equipo con más puntos?", async () => {
+      const state = getState();
+      const scoreA = Number(state.teams?.A?.score || 0);
+      const scoreB = Number(state.teams?.B?.score || 0);
+      if (scoreA === scoreB) {
+        return;
+      }
+
+      const winnerTeam = scoreA > scoreB ? "A" : "B";
+      await dispatch("DECLARE_WINNER", { team: winnerTeam });
+    });
   });
 
   adminConfirmCancelButton.addEventListener("click", closeConfirmModal);

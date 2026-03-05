@@ -315,10 +315,9 @@ h1, h2, h3, h4, p {
 }
 
 .question-action-btn.answer-toggle-locked {
-  background: rgba(90, 90, 90, 0.2);
-  color: #5a5a5a;
-  border: 1px dashed rgba(90, 90, 90, 0.5);
-  letter-spacing: 0.02em;
+  background: rgba(90, 90, 90, 0.35);
+  color: rgba(246, 244, 244, 0.85);
+  border: 1px solid rgba(90, 90, 90, 0.35);
 }
 
 .answers-list {
@@ -465,9 +464,9 @@ h1, h2, h3, h4, p {
 #award-revealed-points:disabled,
 #steal-revealed-points:disabled,
 #add-strike-control:disabled {
-  background: #7a7a7a;
-  color: #e2e2e2;
-  border-color: #666666;
+  background: rgba(90, 90, 90, 0.35);
+  color: rgba(246, 244, 244, 0.85);
+  border-color: rgba(90, 90, 90, 0.35);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
@@ -503,6 +502,10 @@ button,
 .team-name-input {
   width: 100%;
   margin-top: 0.4rem;
+}
+
+.take-control-btn {
+  margin-top: 0.45rem;
 }
 
 .score-adjust-controls {
@@ -567,6 +570,11 @@ button,
 .manual-player-controls button {
   min-height: 40px;
   padding-inline: 0.7rem;
+}
+
+#reset-game,
+#finish-game {
+  flex: 1 1 100%;
 }
 
 .team-members-list {
@@ -1091,11 +1099,13 @@ button:disabled {
   #clear-round-control,
   #logout-all-players,
   #reset-round,
-  #reset-game {
+  #reset-game,
+  #finish-game {
     width: 100%;
   }
 
-  #reset-game {
+  #reset-game,
+  #finish-game {
     grid-column: 1 / -1;
   }
 

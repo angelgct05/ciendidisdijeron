@@ -91,7 +91,11 @@ function renderWinnerMembers(state, team) {
 
 function openWinnerModal(state, team) {
   const teamName = state.teams?.[team]?.name || `Equipo ${team}`;
-  winnerMessageEl.textContent = `¡${teamName} llegó a 500 puntos y ganó la partida!`;
+  const winningScore = Number(state.ui?.winningScore || 500);
+  const teamScore = Number(state.teams?.[team]?.score || 0);
+  winnerMessageEl.textContent = teamScore >= winningScore
+    ? `¡${teamName} alcanzó la meta de ${winningScore} puntos y ganó la partida!`
+    : `¡${teamName} ganó la partida por cierre final con ${teamScore} puntos!`;
   renderWinnerMembers(state, team);
   winnerModalEl.classList.remove("hidden");
   playSound(championsSound);
@@ -99,7 +103,8 @@ function openWinnerModal(state, team) {
 
 function waitForSoundsAndCelebrate(state) {
   const winnerFromState = state.ui?.winnerTeam;
-  const winnerFromScores = Number(state.teams?.A?.score || 0) >= 500 ? "A" : (Number(state.teams?.B?.score || 0) >= 500 ? "B" : null);
+  const winningScore = Number(state.ui?.winningScore || 500);
+  const winnerFromScores = Number(state.teams?.A?.score || 0) >= winningScore ? "A" : (Number(state.teams?.B?.score || 0) >= winningScore ? "B" : null);
   const winnerTeam = winnerFromState === "A" || winnerFromState === "B" ? winnerFromState : winnerFromScores;
   if (winnerTeam !== "A" && winnerTeam !== "B") {
     return;
@@ -127,7 +132,8 @@ function waitForSoundsAndCelebrate(state) {
 
   const latest = getState();
   const latestWinnerFromState = latest.ui?.winnerTeam;
-  const latestWinnerFromScores = Number(latest.teams?.A?.score || 0) >= 500 ? "A" : (Number(latest.teams?.B?.score || 0) >= 500 ? "B" : null);
+  const latestWinningScore = Number(latest.ui?.winningScore || 500);
+  const latestWinnerFromScores = Number(latest.teams?.A?.score || 0) >= latestWinningScore ? "A" : (Number(latest.teams?.B?.score || 0) >= latestWinningScore ? "B" : null);
   const latestWinnerTeam = latestWinnerFromState === "A" || latestWinnerFromState === "B" ? latestWinnerFromState : latestWinnerFromScores;
   if (latestWinnerTeam !== winnerTeam) {
     pendingWinnerToken = null;

@@ -7,6 +7,7 @@ const QUESTION_ACTIONS = new Set(["SET_QUESTIONS", "UPSERT_QUESTION", "DELETE_QU
 const QUESTION_TYPE_ACTIONS = new Set(["UPSERT_QUESTION_TYPE", "DELETE_QUESTION_TYPE"]);
 const DEFAULT_QUESTION_TYPE_ID = "general";
 const DEFAULT_QUESTION_TYPE_NAME = "General";
+const WINNING_SCORE_OPTIONS = [250, 500, 750, 1000];
 
 let state = null;
 let channel = null;
@@ -113,6 +114,11 @@ function normalizeTeamName(value, fallback) {
   return text.length ? text.slice(0, 24) : fallback;
 }
 
+function normalizeWinningScore(value) {
+  const parsed = Number(value);
+  return WINNING_SCORE_OPTIONS.includes(parsed) ? parsed : 500;
+}
+
 function normalizePlayers(players) {
   if (!Array.isArray(players)) {
     return [];
@@ -167,6 +173,7 @@ function createInitialState(defaultQuestions = []) {
     ui: {
       showQr: false,
       activeQuestionTypeId: questionTypes[0].id,
+      winningScore: 500,
       logoutAllVersion: 0,
       teamBackAlertTeam: null,
       teamBackAlertVersion: 0,
@@ -241,6 +248,7 @@ function validateState(nextState, fallbackQuestions = []) {
     ui: {
       showQr: Boolean(nextState.ui?.showQr),
       activeQuestionTypeId,
+      winningScore: normalizeWinningScore(nextState.ui?.winningScore),
       logoutAllVersion: Number.isFinite(Number(nextState.ui?.logoutAllVersion))
         ? Number(nextState.ui.logoutAllVersion)
         : 0,
@@ -396,12 +404,7 @@ function resetRoundInternals() {
   state.round.status = "buzz-open";
   state.round.buzzerWinner = null;
   state.round.revealed = [];
-  state.round.pointsMultiplier = 1;
   state.round.actionsLocked = false;
-  state.round.captains = {
-    A: null,
-    B: null,
-  };
   state.teams.A.strikes = 0;
   state.teams.B.strikes = 0;
   state.ui.teamBackAlertTeam = null;
@@ -472,8 +475,9 @@ function applyActionLocal(action, payload = {}) {
 
       const previousScore = Number(state.teams[team].score) || 0;
       state.teams[team].score = Math.max(0, state.teams[team].score + points);
+      const winningScore = normalizeWinningScore(state.ui?.winningScore);
 
-      if (!state.ui.winnerTeam && previousScore < 500 && state.teams[team].score >= 500) {
+      if (!state.ui.winnerTeam && previousScore < winningScore && state.teams[team].score >= winningScore) {
         state.ui.winnerTeam = team;
         state.ui.winnerVersion = (Number(state.ui.winnerVersion) || 0) + 1;
       }
@@ -497,7 +501,7 @@ function applyActionLocal(action, payload = {}) {
         break;
       }
 
-      state.teams[team].strikes = Math.max(0, (Number(state.teams[team].strikes) || 0) + 1);
+      state.teams[team].strikes = Math.min(3, Math.max(0, (Number(state.teams[team].strikes) || 0) + 1));
       emitSoundEvent("incorrect");
 
       const controlTeam = state.round.buzzerWinner;
@@ -621,12 +625,24 @@ function applyActionLocal(action, payload = {}) {
       break;
     }
     case "SET_ROUND_MULTIPLIER": {
+      if (Number(state.round.questionIndex) >= 0) {
+        break;
+      }
+
       const value = Number(payload.multiplier);
       if (![1, 2, 3].includes(value)) {
         break;
       }
 
       state.round.pointsMultiplier = value;
+      break;
+    }
+    case "SET_WINNING_SCORE": {
+      if (Number(state.round.questionIndex) >= 0) {
+        break;
+      }
+
+      state.ui.winningScore = normalizeWinningScore(payload.value);
       break;
     }
     case "LOGOUT_PLAYER": {
@@ -775,6 +791,10 @@ function applyActionLocal(action, payload = {}) {
       break;
     }
     case "SET_ACTIVE_QUESTION_TYPE": {
+      if (Number(state.round.questionIndex) >= 0) {
+        break;
+      }
+
       const id = String(payload.id || "").trim();
       if (!state.questionTypes.some((item) => item.id === id)) {
         break;
@@ -806,8 +826,22 @@ function applyActionLocal(action, payload = {}) {
       state.teams.A.score = 0;
       state.teams.B.score = 0;
       state.round.questionIndex = -1;
+      state.round.pointsMultiplier = 1;
       state.ui.winnerTeam = null;
+      state.round.captains.A = null;
+      state.round.captains.B = null;
+      state.ui.winningScore = 500;
       resetRoundInternals();
+      break;
+    }
+    case "DECLARE_WINNER": {
+      const team = payload.team;
+      if (team !== "A" && team !== "B") {
+        break;
+      }
+
+      state.ui.winnerTeam = team;
+      state.ui.winnerVersion = (Number(state.ui.winnerVersion) || 0) + 1;
       break;
     }
     default:

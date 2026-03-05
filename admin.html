@@ -34,7 +34,7 @@
           <p id="admin-team-control-badge-a" class="team-control-badge" aria-live="polite"></p>
           <h2 id="admin-team-name-a">Equipo A</h2>
           <input id="team-name-a-input" class="team-name-input" type="text" maxlength="24" placeholder="Nombre Equipo A" />
-          <button id="take-control-a" type="button">Tomar control</button>
+          <button id="take-control-a" type="button" class="take-control-btn">Dar el control</button>
           <p id="admin-score-a" class="score">0</p>
           <div class="score-adjust-controls">
             <button data-score-action="A:sub">Restar</button>
@@ -45,7 +45,7 @@
             <p>Strikes: <strong id="admin-strikes-a">0</strong></p>
           </div>
           <div class="team-members">
-            <label for="captain-name-a">Capitán (visual)</label>
+            <label for="captain-name-a">Capitán</label>
             <input id="captain-name-a" class="captain-name-input" type="text" maxlength="32" placeholder="Nombre del capitán" />
             <h4>Integrantes</h4>
             <ul id="team-members-a" class="team-members-list"></ul>
@@ -59,7 +59,7 @@
           <p id="admin-team-control-badge-b" class="team-control-badge" aria-live="polite"></p>
           <h2 id="admin-team-name-b">Equipo B</h2>
           <input id="team-name-b-input" class="team-name-input" type="text" maxlength="24" placeholder="Nombre Equipo B" />
-          <button id="take-control-b" type="button">Tomar control</button>
+          <button id="take-control-b" type="button" class="take-control-btn">Dar el control</button>
           <p id="admin-score-b" class="score">0</p>
           <div class="score-adjust-controls">
             <button data-score-action="B:sub">Restar</button>
@@ -70,7 +70,7 @@
             <p>Strikes: <strong id="admin-strikes-b">0</strong></p>
           </div>
           <div class="team-members">
-            <label for="captain-name-b">Capitán (visual)</label>
+            <label for="captain-name-b">Capitán</label>
             <input id="captain-name-b" class="captain-name-input" type="text" maxlength="32" placeholder="Nombre del capitán" />
             <h4>Integrantes</h4>
             <ul id="team-members-b" class="team-members-list"></ul>
@@ -84,6 +84,15 @@
 
       <section class="admin-controls">
         <h3>Control de Ronda</h3>
+        <div class="round-multiplier-row">
+          <label for="winning-score-select">Puntuación para ganar</label>
+          <select id="winning-score-select" class="round-multiplier-select">
+            <option value="250">250</option>
+            <option value="500" selected>500</option>
+            <option value="750">750</option>
+            <option value="1000">1000</option>
+          </select>
+        </div>
         <div class="round-multiplier-row">
           <label for="round-multiplier-select">Multiplicador de ronda</label>
           <select id="round-multiplier-select" class="round-multiplier-select">
@@ -99,9 +108,10 @@
         <div class="control-grid">
           <button id="toggle-qr">Mostrar QR</button>
           <button id="clear-round-control">Quitar Control de Ronda</button>
-          <button id="logout-all-players">Cerrar sesión de jugadores</button>
+          <button id="logout-all-players">Expulsar todos los jugadores</button>
           <button id="reset-round">Reiniciar Ronda</button>
           <button id="reset-game" class="danger">Reiniciar Partida</button>
+          <button id="finish-game" class="danger">Terminar Partida</button>
         </div>
         <p id="admin-buzzer-status" class="buzzer-status"></p>
       </section>
@@ -110,7 +120,7 @@
         <div class="question-nav-controls">
           <button id="prev-question">Pregunta Anterior</button>
           <div class="question-center-actions">
-            <button id="award-revealed-points">Termina Ronda</button>
+            <button id="award-revealed-points">Sumar Respuestas</button>
             <button id="steal-revealed-points">Robo de Puntos</button>
             <button id="add-strike-control">Agregar Strike</button>
           </div>
