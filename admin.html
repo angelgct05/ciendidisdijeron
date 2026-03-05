@@ -150,6 +150,18 @@
       </div>
     </div>
 
+    <div id="player-edit-modal" class="mini-modal hidden" role="dialog" aria-modal="true" aria-labelledby="player-edit-title">
+      <div class="mini-modal-card">
+        <h3 id="player-edit-title">Editar nombre del jugador</h3>
+        <input id="player-edit-input" class="mini-modal-input" type="text" maxlength="32" autocomplete="off" />
+        <p id="player-edit-error" class="mini-modal-error hidden">Ingresa un nombre válido</p>
+        <div class="mini-modal-actions">
+          <button id="player-edit-cancel" type="button" class="danger">Cancelar</button>
+          <button id="player-edit-save" type="button">Guardar</button>
+        </div>
+      </div>
+    </div>
+
     <div id="winner-modal" class="mini-modal winner-modal hidden" role="dialog" aria-modal="true" aria-labelledby="winner-title">
       <div class="mini-modal-card winner-card">
         <p class="winner-emoji" aria-hidden="true">🎉🏆🎉</p>

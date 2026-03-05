@@ -57,12 +57,18 @@ const adminConfirmModal = document.getElementById("admin-confirm-modal");
 const adminConfirmMessage = document.getElementById("admin-confirm-message");
 const adminConfirmCancelButton = document.getElementById("admin-confirm-cancel");
 const adminConfirmAcceptButton = document.getElementById("admin-confirm-accept");
+const playerEditModal = document.getElementById("player-edit-modal");
+const playerEditInput = document.getElementById("player-edit-input");
+const playerEditError = document.getElementById("player-edit-error");
+const playerEditCancelButton = document.getElementById("player-edit-cancel");
+const playerEditSaveButton = document.getElementById("player-edit-save");
 const winnerModal = document.getElementById("winner-modal");
 const winnerMessage = document.getElementById("winner-message");
 const winnerMembers = document.getElementById("winner-members");
 const winnerAcceptButton = document.getElementById("winner-accept");
 
 let pendingConfirmAction = null;
+let pendingPlayerEditId = null;
 let syncingSelects = 0;
 let questionTypeOptionsSignature = "";
 const correctSound = new Audio("./assets/audio/correcto.mp3");
@@ -446,7 +452,7 @@ function renderTeamMembers(state, team, container, captainInput) {
     item.innerHTML = `
       <span class="team-member-name">${player.name}</span>
       <div class="team-member-actions">
-        <button type="button" class="question-action-btn" data-captain-copy="${player.id}">Copiar a capitán</button>
+        <button type="button" class="question-action-btn captain-copy-btn" title="Copiar a capitán" data-captain-copy="${player.id}">Capitán</button>
         ${isManual
     ? `<button type="button" class="question-action-btn" data-player-edit="${player.id}">Editar</button>
              <button type="button" class="question-action-btn danger" data-player-delete="${player.id}">Eliminar</button>`
@@ -463,12 +469,7 @@ function renderTeamMembers(state, team, container, captainInput) {
     const editButton = item.querySelector("[data-player-edit]");
     if (editButton) {
       editButton.addEventListener("click", () => {
-        const nextName = window.prompt("Editar nombre del jugador", player.name);
-        if (nextName === null) {
-          return;
-        }
-
-        dispatch("EDIT_MANUAL_PLAYER", { id: player.id, name: nextName });
+        openPlayerEditModal(player);
       });
     }
 
@@ -632,6 +633,38 @@ function openConfirmModal(message, onConfirm) {
   adminConfirmModal.classList.remove("hidden");
 }
 
+function closePlayerEditModal() {
+  playerEditModal.classList.add("hidden");
+  playerEditError.classList.add("hidden");
+  pendingPlayerEditId = null;
+}
+
+function openPlayerEditModal(player) {
+  pendingPlayerEditId = player.id;
+  playerEditInput.value = player.name;
+  playerEditError.classList.add("hidden");
+  playerEditModal.classList.remove("hidden");
+  playerEditInput.focus();
+  playerEditInput.select();
+}
+
+function submitPlayerEdit() {
+  if (!pendingPlayerEditId) {
+    closePlayerEditModal();
+    return;
+  }
+
+  const nextName = String(playerEditInput.value || "").trim();
+  if (!nextName) {
+    playerEditError.classList.remove("hidden");
+    playerEditInput.focus();
+    return;
+  }
+
+  dispatch("EDIT_MANUAL_PLAYER", { id: pendingPlayerEditId, name: nextName });
+  closePlayerEditModal();
+}
+
 function attachEvents() {
   pinForm.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -790,9 +823,32 @@ function attachEvents() {
     }
   });
 
+  playerEditCancelButton.addEventListener("click", closePlayerEditModal);
+  playerEditSaveButton.addEventListener("click", submitPlayerEdit);
+  playerEditInput.addEventListener("input", () => {
+    if (!playerEditError.classList.contains("hidden")) {
+      playerEditError.classList.add("hidden");
+    }
+  });
+
+  playerEditModal.addEventListener("click", (event) => {
+    if (event.target === playerEditModal) {
+      closePlayerEditModal();
+    }
+  });
+
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && !adminConfirmModal.classList.contains("hidden")) {
       closeConfirmModal();
+    }
+
+    if (event.key === "Escape" && !playerEditModal.classList.contains("hidden")) {
+      closePlayerEditModal();
+    }
+
+    if (event.key === "Enter" && !playerEditModal.classList.contains("hidden") && document.activeElement === playerEditInput) {
+      event.preventDefault();
+      submitPlayerEdit();
     }
 
     if (event.key === "Escape" && !winnerModal.classList.contains("hidden")) {
