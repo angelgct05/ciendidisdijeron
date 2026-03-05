@@ -10,6 +10,8 @@ const pinError = document.getElementById("pin-error");
 const adminApp = document.getElementById("admin-app");
 const topbarMenuToggle = document.getElementById("topbar-menu-toggle");
 const topbarControls = document.getElementById("topbar-controls");
+const adminTabButtons = Array.from(document.querySelectorAll(".admin-tab-btn"));
+const adminTabPanels = Array.from(document.querySelectorAll("[data-tab-panel]"));
 const logoutAdminButton = document.getElementById("logout-admin");
 
 const adminTeamNameA = document.getElementById("admin-team-name-a");
@@ -75,6 +77,32 @@ let lastWinnerVersionShown = 0;
 let winnerModalTimeoutId = null;
 let lastWinnerFallbackKeyShown = "";
 let pendingWinnerToken = null;
+let activeAdminTab = "teams";
+
+function isMobileLayout() {
+  return window.innerWidth <= 900;
+}
+
+function setActiveAdminTab(tab) {
+  activeAdminTab = ["teams", "round", "questions"].includes(tab) ? tab : "teams";
+
+  adminTabButtons.forEach((button) => {
+    const isActive = button.dataset.tab === activeAdminTab;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-selected", isActive ? "true" : "false");
+  });
+
+  const mobile = isMobileLayout();
+  adminTabPanels.forEach((panel) => {
+    if (!mobile) {
+      panel.classList.remove("admin-tab-hidden");
+      return;
+    }
+
+    const isActive = panel.dataset.tabPanel === activeAdminTab;
+    panel.classList.toggle("admin-tab-hidden", !isActive);
+  });
+}
 
 function toggleTopbarMenu(forceOpen = null) {
   const shouldOpen = typeof forceOpen === "boolean" ? forceOpen : topbarControls.classList.contains("collapsed");
@@ -765,6 +793,12 @@ function attachEvents() {
     toggleTopbarMenu();
   });
 
+  adminTabButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      setActiveAdminTab(button.dataset.tab || "teams");
+    });
+  });
+
   topbarControls.addEventListener("click", (event) => {
     const option = event.target.closest("a, button");
     if (!option || option.id === "topbar-menu-toggle") {
@@ -780,6 +814,8 @@ function attachEvents() {
     if (window.innerWidth > 900) {
       toggleTopbarMenu(true);
     }
+
+    setActiveAdminTab(activeAdminTab);
   });
 
   logoutAdminButton.addEventListener("click", () => {
@@ -887,6 +923,7 @@ async function main() {
 
   await initializeState(defaults);
   toggleTopbarMenu(window.innerWidth > 900);
+  setActiveAdminTab("teams");
   subscribeConnectionStatus(renderSupabaseStatus);
   subscribe(render);
 }
