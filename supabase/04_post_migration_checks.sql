@@ -3,6 +3,9 @@
 -- Ejecutar en el proyecto NUEVO después de:
 -- 1) 01_schema_full.sql
 -- 2) 03_import_new_project.sql
+--
+-- Nota: cambios recientes de UI (iconos, menú y navegación)
+-- no requieren cambios de esquema SQL adicionales.
 
 -- ==============================
 -- 1) Verificar objetos principales

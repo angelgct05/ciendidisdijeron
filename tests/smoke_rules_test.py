@@ -45,7 +45,7 @@ class SmokeRulesTest(unittest.TestCase):
         self.assertIn("Expulsar todos los jugadores", html)
         self.assertIn("Puntuación para ganar", html)
         self.assertIn("Terminar Partida", html)
-        self.assertIn("Sumar Respuestas", html)
+        self.assertIn("Sumar Puntos", html)
 
     def test_captain_page_removed(self):
         with self.assertRaises(urllib.error.HTTPError) as context:
@@ -62,7 +62,8 @@ class SmokeRulesTest(unittest.TestCase):
     def test_admin_round_actions_reset_round(self):
         admin_js = (ROOT / "js" / "admin.js").read_text(encoding="utf-8")
         self.assertIn('await dispatch("ADD_SCORE"', admin_js)
-        self.assertIn('await dispatch("RESET_ROUND")', admin_js)
+        self.assertIn('await dispatch("SET_QUESTION_INDEX", { index: -1 })', admin_js)
+        self.assertIn("isLastQuestionInRound", admin_js)
 
     def test_disabled_color_is_consistent(self):
         css = (ROOT / "styles.css").read_text(encoding="utf-8")

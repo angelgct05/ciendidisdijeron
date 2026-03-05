@@ -2,124 +2,90 @@
 
 Aplicación web estática para dinámica tipo “100 Mexicanos Dijeron”, con control en tiempo real entre pantallas.
 
-## Pantallas principales
+## Pantallas
 
-- `admin.html`: panel de conducción del juego (PIN admin).
-- `index.html`: pantalla principal para mostrar pregunta, respuestas y marcador.
-- `questions.html`: CRUD de tipos de pregunta y banco de preguntas/respuestas.
+- `admin.html`: operación de la partida (requiere PIN `2026`).
+- `index.html`: pantalla del juego para público/jugadores.
+- `questions.html`: administración de tipos y preguntas.
 - `instructions.html`: guía para jugadores.
 
-## Inicio rápido
+## Flujo rápido
 
-1. Abre `admin.html`.
-2. Ingresa PIN admin: `2026`.
-3. Abre `index.html` en otra pestaña/dispositivo para mostrar el tablero.
-4. Configura puntuación para ganar, tipo de partida, multiplicador y capitán por texto.
-5. Inicia con `Siguiente Pregunta`.
+1. Abre `admin.html` e ingresa el PIN.
+2. Configura meta de puntos, tipo de ronda y multiplicador (antes de iniciar pregunta 1).
+3. Asigna control de ronda con `Dar el control`.
+4. Inicia con `Siguiente Pregunta`.
+5. Revela respuestas, suma strikes y cierra ronda con `Sumar Puntos` o `Robo de Puntos`.
 
-## Reglas de juego implementadas
+## Reglas implementadas
 
-- Dos equipos compiten por adivinar respuestas populares.
-- El control de ronda se define desde Admin con `Dar el control` (Equipo A o B).
-- `Mostrar/Ocultar` respuestas solo está habilitado cuando existe control de ronda.
-- `Agregar Strike` aplica al equipo con control y tiene tope de `3`.
-- `Robo de Puntos` solo se habilita cuando algún equipo llega a `3` strikes.
-- Cierre de ronda:
-   - `Sumar Respuestas`: suma al equipo con control.
-   - `Robo de Puntos`: suma al equipo contrario.
-- Al cerrar ronda con `Sumar Respuestas` o `Robo de Puntos`, la ronda se reinicia automáticamente.
-- El selector de puntuación para ganar (`250/500/750/1000`) se bloquea al iniciar la pregunta 1 y solo se desbloquea al reiniciar partida.
-- Multiplicador y tipo de partida también se bloquean al iniciar la pregunta 1.
+- Control de ronda manual desde admin (`Equipo 1` o `Equipo 2`).
+- `Agregar Strike` aplica solo al equipo con control y tiene tope de 3.
+- `Robo de Puntos` solo está habilitado cuando al menos un equipo llega a 3 strikes.
+- `Sumar Puntos` suma al equipo con control.
+- `Robo de Puntos` suma al equipo contrario.
+- Al cerrar ronda:
+  - si era la última pregunta del bloque, vuelve a `Pregunta 0` (espera de inicio),
+  - si no era la última, queda cerrada y se avanza con `Siguiente Pregunta`.
+- Meta de puntaje configurable: `250 / 500 / 750 / 1000`.
+- Meta, multiplicador y tipo de ronda se bloquean al iniciar la pregunta 1.
 - `Terminar Partida` declara ganador al equipo con mayor puntaje.
 
-## Sonidos globales
+## UX actual
 
-Se sincronizan entre pantallas conectadas:
+- Menú superior colapsado por defecto en todas las pantallas.
+- Navegación en misma pestaña para enlaces internos (excepto `Pantalla de Juego`, que abre en nueva pestaña).
+- Botonería de acción con iconos.
+- Overlay QR con leyenda para entrada desde celular.
 
-- `assets/audio/button.mp3`: asignación de control desde Admin (`Dar el control`).
-- `assets/audio/correcto.mp3`: respuesta revelada.
+## Sonidos sincronizados
+
+- `assets/audio/correcto.mp3`: revelar respuesta.
 - `assets/audio/incorrecto.mp3`: strike.
-- `assets/audio/a_jugar.mp3`: siguiente pregunta.
+- `assets/audio/a_jugar.mp3`: avance de pregunta.
 - `assets/audio/triunfo.mp3`: cierre de ronda con puntos.
-- `assets/audio/we-are-the-champions.mp3`: ganador de partida.
+- `assets/audio/we-are-the-champions.mp3`: ganador final.
 
-## Estructura de datos
+## Base de datos y estado
 
-### Tipos de pregunta
+- Tablas principales:
+  - `game_rooms`
+  - `game_question_types`
+  - `game_questions`
+- La meta de puntaje se guarda en `game_rooms.state.ui.winningScore`.
+- Sin RPC de buzzer activo: el control de ronda se maneja en estado.
 
-- Tabla: `game_question_types`
-- Campos principales: `room_code`, `id`, `name`, `description`
+## Migración / actualización
 
-### Preguntas
+### Proyecto nuevo
 
-- Tabla: `game_questions`
-- Campos principales: `room_code`, `position`, `question`, `type_id`, `display_order`, `answers (jsonb)`
+Ejecutar en este orden:
 
-## Configuración de Base de Datos
+1. `supabase/01_schema_full.sql`
+2. `supabase/02_export_old_project.sql` (en proyecto origen)
+3. `supabase/03_import_new_project.sql` (en proyecto destino)
+4. `supabase/04_post_migration_checks.sql`
 
-Ejecuta el script:
+### Proyecto existente
 
-- `supabase/game_questions.sql`
+- Si aún existe RPC legado de buzzer, ejecutar:
+  - `supabase/05_remove_buzzer_rpc.sql`
 
-Este script crea/ajusta:
+### Nota de esta actualización
 
-- Tablas y columnas necesarias.
-- Índices.
-- Políticas RLS para uso del cliente `anon`.
-- Backfill de categoría general para compatibilidad.
+- Los cambios recientes de iconografía, navegación y menús son solo de frontend.
+- No agregan nuevas tablas ni columnas, por lo que no requieren migración SQL adicional.
 
-## Sincronización
+## Verificación recomendada
 
-El estado usa sincronización híbrida:
+1. Confirmar “Base de Datos: conectado” en admin.
+2. Validar que menús inician colapsados.
+3. Probar navegación interna en misma pestaña.
+4. Abrir QR y confirmar leyenda encima del código.
+5. Ejecutar una ronda completa:
+   - control,
+   - revelar,
+   - strikes,
+   - sumar/robar,
+   - avance de pregunta.
 
-- Supabase Realtime.
-- Polling de respaldo.
-- Reintentos automáticos ante fallos transitorios.
-- Persistencia local para continuidad de sesión.
-
-## Despliegue (Vercel)
-
-1. Sube el proyecto a Git.
-2. Importa en Vercel.
-3. Preset: `Other`.
-4. Build command: vacío.
-5. Output directory: raíz del proyecto.
-
-## Recomendaciones operativas
-
-- Haz recarga completa (`Ctrl+F5`) tras cambios de assets o audio.
-- Verifica en admin el estado “Base de Datos: conectado”.
-- Para evento en vivo: una pestaña para admin y otra para pantalla pública.
-
-## Migración a un proyecto nuevo de Supabase
-
-### Qué debes tomar en cuenta antes de migrar
-
-- Guarda respaldo del estado actual (`game_rooms`, `game_questions`, `game_question_types`).
-- Crea el nuevo proyecto y verifica que tenga Realtime habilitado.
-- Actualiza credenciales en [js/config.js](js/config.js):
-   - `SUPABASE_URL`
-   - `SUPABASE_ANON_KEY`
-   - `ROOM_CODE`
-- Ejecuta scripts en este orden:
-   1. [supabase/01_schema_full.sql](supabase/01_schema_full.sql) en proyecto nuevo.
-   2. [supabase/02_export_old_project.sql](supabase/02_export_old_project.sql) en proyecto viejo.
-   3. [supabase/03_import_new_project.sql](supabase/03_import_new_project.sql) en proyecto nuevo (pegando el JSON exportado).
-
-### Validación post-migración
-
-- Abre `admin.html` y confirma “Base de Datos: conectado”.
-- Verifica en `questions.html` que aparecen tipos/preguntas.
-- Prueba flujo mínimo:
-   - seleccionar equipo con `Dar el control`,
-   - revelar respuesta,
-   - sumar puntos,
-   - verificar que `Robo de Puntos` se habilite al llegar a 3 strikes,
-   - verificar que la meta de puntaje elegida dispare ganador.
-
-### Migración para instalaciones existentes (sin reiniciar proyecto)
-
-- Si tu proyecto ya tenía buzzer por RPC, ejecuta también:
-  - [supabase/05_remove_buzzer_rpc.sql](supabase/05_remove_buzzer_rpc.sql)
-- Esta migración elimina la función `try_lock_buzzer` que ya no se utiliza en el flujo actual.
-- La puntuación para ganar vive en `state.ui.winningScore` dentro de `game_rooms.state`, no requiere cambios de esquema SQL.
