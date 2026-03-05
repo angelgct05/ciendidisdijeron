@@ -8,6 +8,8 @@ const pinForm = document.getElementById("pin-form");
 const pinInput = document.getElementById("pin-input");
 const pinError = document.getElementById("pin-error");
 const questionsApp = document.getElementById("questions-app");
+const topbarMenuToggle = document.getElementById("topbar-menu-toggle");
+const topbarControls = document.getElementById("topbar-controls");
 const logoutAdminButton = document.getElementById("logout-admin");
 const questionsSupabaseStatus = document.getElementById("questions-supabase-status");
 
@@ -68,6 +70,16 @@ let audioUnlockConfigured = false;
 let pendingConfirmAction = null;
 let questionsPageSize = 10;
 let questionsPage = 1;
+
+function toggleTopbarMenu(forceOpen = null) {
+  if (!topbarControls || !topbarMenuToggle) {
+    return;
+  }
+
+  const shouldOpen = typeof forceOpen === "boolean" ? forceOpen : topbarControls.classList.contains("collapsed");
+  topbarControls.classList.toggle("collapsed", !shouldOpen);
+  topbarMenuToggle.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+}
 
 function playSound(sound) {
   if (!sound) {
@@ -762,6 +774,29 @@ function attachEvents() {
     pinInput.focus();
   });
 
+  if (topbarMenuToggle && topbarControls) {
+    topbarMenuToggle.addEventListener("click", () => {
+      toggleTopbarMenu();
+    });
+
+    topbarControls.addEventListener("click", (event) => {
+      const option = event.target.closest("a, button");
+      if (!option || option.id === "topbar-menu-toggle") {
+        return;
+      }
+
+      if (window.innerWidth <= 900) {
+        toggleTopbarMenu(false);
+      }
+    });
+
+    window.addEventListener("resize", () => {
+      if (window.innerWidth > 900) {
+        toggleTopbarMenu(true);
+      }
+    });
+  }
+
   newQuestionButton.addEventListener("click", async () => {
     openQuestionModal({ mode: "create" });
   });
@@ -914,6 +949,7 @@ async function main() {
   renderSupabaseStatus(getConnectionStatus());
 
   attachEvents();
+  toggleTopbarMenu(window.innerWidth > 900);
 
   let defaults = [];
   try {
