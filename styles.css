@@ -1395,12 +1395,29 @@ button:disabled {
   font-size: 0.95rem;
 }
 
+.qr-modal-content {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+
 .qr-modal-image {
   width: min(86vw, 560px);
   max-height: 86vh;
   object-fit: contain;
   border-radius: 12px;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3);
+}
+
+.qr-modal-caption {
+  margin: 0;
+  padding: 0.45rem 0.7rem;
+  background: rgba(246, 244, 244, 0.95);
+  color: var(--text);
+  border: 1px solid rgba(90, 90, 90, 0.22);
+  border-radius: 10px;
+  font-weight: 700;
+  text-align: center;
 }
 
 @media (max-width: 900px) {
