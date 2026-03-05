@@ -35,7 +35,6 @@ const scoreDeltaInputB = document.getElementById("score-delta-b");
 const teamMembersA = document.getElementById("team-members-a");
 const teamMembersB = document.getElementById("team-members-b");
 const toggleQrButton = document.getElementById("toggle-qr");
-const clearRoundControlButton = document.getElementById("clear-round-control");
 const awardRevealedPointsButton = document.getElementById("award-revealed-points");
 const stealRevealedPointsButton = document.getElementById("steal-revealed-points");
 const addStrikeControlButton = document.getElementById("add-strike-control");
@@ -529,7 +528,6 @@ function render(state) {
     adminTeamControlBadgeA.classList.remove("active");
     adminTeamControlBadgeB.classList.remove("active");
   }
-  clearRoundControlButton.disabled = !(controlTeam === "A" || controlTeam === "B");
   takeControlAButton.disabled = controlTeam === "A";
   takeControlBButton.disabled = controlTeam === "B";
 
@@ -632,9 +630,6 @@ function attachEvents() {
   });
   takeControlBButton.addEventListener("click", () => {
     dispatch("FORCE_ROUND_CONTROL", { team: "B" });
-  });
-  clearRoundControlButton.addEventListener("click", () => {
-    dispatch("CLEAR_ROUND_CONTROL");
   });
   addStrikeControlButton.addEventListener("click", () => {
     const controlTeam = getState().round?.buzzerWinner;
