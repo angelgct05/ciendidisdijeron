@@ -801,12 +801,6 @@ function attachEvents() {
         toggleTopbarMenu(false);
       }
     });
-
-    window.addEventListener("resize", () => {
-      if (window.innerWidth > 900) {
-        toggleTopbarMenu(true);
-      }
-    });
   }
 
   newQuestionButton.addEventListener("click", async () => {
@@ -961,7 +955,7 @@ async function main() {
   renderSupabaseStatus(getConnectionStatus());
 
   attachEvents();
-  toggleTopbarMenu(window.innerWidth > 900);
+  toggleTopbarMenu(false);
 
   let defaults = [];
   try {

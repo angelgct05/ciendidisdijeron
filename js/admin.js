@@ -547,7 +547,7 @@ function render(state) {
     });
   }
   renderQuestionTypeSelect(state);
-  toggleQrButton.textContent = state.ui?.showQr ? "Ocultar QR" : "Mostrar QR";
+  toggleQrButton.innerHTML = `<span class="action-icon action-icon-qr" aria-hidden="true"></span>${state.ui?.showQr ? "Ocultar QR" : "Mostrar QR"}`;
   const controlTeam = state.round.buzzerWinner;
   adminTeamControlBadgeA.textContent = controlTeam === "A" ? "TIENEN EL CONTROL" : "";
   adminTeamControlBadgeB.textContent = controlTeam === "B" ? "TIENEN EL CONTROL" : "";
@@ -880,10 +880,6 @@ function attachEvents() {
   });
 
   window.addEventListener("resize", () => {
-    if (window.innerWidth > 900) {
-      toggleTopbarMenu(true);
-    }
-
     setActiveAdminTab(activeAdminTab);
   });
 
@@ -991,7 +987,7 @@ async function main() {
   }
 
   await initializeState(defaults);
-  toggleTopbarMenu(window.innerWidth > 900);
+  toggleTopbarMenu(false);
   setActiveAdminTab("teams");
   subscribeConnectionStatus(renderSupabaseStatus);
   subscribe(render);

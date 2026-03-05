@@ -426,6 +426,34 @@ h1, h2, h3, h4, p {
   background-image: url("./assets/icons/filled/sign-left.svg");
 }
 
+.action-icon-expel {
+  background-image: url("./assets/icons/filled/user.svg");
+}
+
+.action-icon-reset {
+  background-image: url("./assets/icons/filled/direction-arrows.svg");
+}
+
+.action-icon-finish {
+  background-image: url("./assets/icons/filled/trophy.svg");
+}
+
+.action-icon-score-add {
+  background-image: url("./assets/icons/filled/circle-plus.svg");
+}
+
+.action-icon-steal {
+  background-image: url("./assets/icons/filled/exchange.svg");
+}
+
+.action-icon-strike {
+  background-image: url("./assets/icons/filled/square-x.svg");
+}
+
+.action-icon-next-question {
+  background-image: url("./assets/icons/filled/arrow-right-square.svg");
+}
+
 .action-icon-detail {
   background-image: url("./assets/icons/filled/list-details.svg");
 }
@@ -529,6 +557,41 @@ h1, h2, h3, h4, p {
   .action-icon-logout {
     mask-image: url("./assets/icons/filled/sign-left.svg");
     -webkit-mask-image: url("./assets/icons/filled/sign-left.svg");
+  }
+
+  .action-icon-expel {
+    mask-image: url("./assets/icons/filled/user.svg");
+    -webkit-mask-image: url("./assets/icons/filled/user.svg");
+  }
+
+  .action-icon-reset {
+    mask-image: url("./assets/icons/filled/direction-arrows.svg");
+    -webkit-mask-image: url("./assets/icons/filled/direction-arrows.svg");
+  }
+
+  .action-icon-finish {
+    mask-image: url("./assets/icons/filled/trophy.svg");
+    -webkit-mask-image: url("./assets/icons/filled/trophy.svg");
+  }
+
+  .action-icon-score-add {
+    mask-image: url("./assets/icons/filled/circle-plus.svg");
+    -webkit-mask-image: url("./assets/icons/filled/circle-plus.svg");
+  }
+
+  .action-icon-steal {
+    mask-image: url("./assets/icons/filled/exchange.svg");
+    -webkit-mask-image: url("./assets/icons/filled/exchange.svg");
+  }
+
+  .action-icon-strike {
+    mask-image: url("./assets/icons/filled/square-x.svg");
+    -webkit-mask-image: url("./assets/icons/filled/square-x.svg");
+  }
+
+  .action-icon-next-question {
+    mask-image: url("./assets/icons/filled/arrow-right-square.svg");
+    -webkit-mask-image: url("./assets/icons/filled/arrow-right-square.svg");
   }
 
   .action-icon-detail {
